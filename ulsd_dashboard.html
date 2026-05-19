@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ULSD Import Dashboard — Mexico</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="ulsd_data.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3e;
+    --accent: #4f8ef7;
+    --warn: #f5a623;
+    --danger: #e74c3c;
+    --text: #e8eaf0;
+    --muted: #7a7f96;
+    --green: #27ae60;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  header .subtitle { color: var(--muted); font-size: 13px; }
+  header .badge {
+    margin-left: auto;
+    background: #1e3a5f;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 57px); }
+
+  /* Sidebar */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .filter-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .filter-group select, .filter-group input[type="date"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 10px;
+    font-size: 13px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .filter-group select:focus, .filter-group input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .filter-group select[multiple] { height: auto; min-height: 120px; padding: 4px; }
+  .filter-group select[multiple] option {
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .filter-group select[multiple] option:checked { background: var(--accent); color: #fff; }
+
+  .filter-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .date-row input { font-size: 12px; }
+
+  /* Cargolive toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-row span { font-size: 12px; }
+  .toggle-row .warn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: inline-block; margin-right: 6px; }
+  .toggle { position: relative; width: 36px; height: 20px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--warn); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+  .btn-reset {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    padding: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: auto;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Main content */
+  main { padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+
+  /* Metric cards */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .metric-card .label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+  .metric-card .value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .metric-card .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .metric-card.accent { border-color: rgba(79,142,247,0.3); }
+
+  /* Chart card */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chart-title { font-size: 14px; font-weight: 600; }
+  .chart-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .metric-toggle {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .metric-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .metric-toggle button.active { background: var(--accent); color: white; }
+  .metric-toggle button:hover:not(.active) { color: var(--text); }
+
+  .agg-toggle {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .agg-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .agg-toggle button.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); margin: -1px; border-radius: 5px; }
+  .agg-toggle button:hover:not(.active) { color: var(--text); }
+
+  .chart-wrap { position: relative; flex: 1; min-height: 320px; }
+  canvas { position: absolute; inset: 0; }
+
+  /* Warning banner */
+  .warn-banner {
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.4);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--warn);
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .warn-banner.visible { display: flex; }
+  .warn-banner svg { flex-shrink: 0; }
+
+  /* Bottom row: table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .table-card .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-card .table-title { font-size: 13px; font-weight: 600; }
+  .table-card .row-count { font-size: 11px; color: var(--muted); }
+
+  .table-scroll { overflow-x: auto; max-height: 260px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { position: sticky; top: 0; z-index: 1; }
+  thead tr { background: var(--bg); }
+  th {
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  th .sort-icon { opacity: 0.4; margin-left: 3px; }
+  th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+  tbody tr { border-bottom: 1px solid rgba(42,45,62,0.6); transition: background 0.1s; }
+  tbody tr:hover { background: rgba(79,142,247,0.05); }
+  tbody tr.non-bulk { background: rgba(245,166,35,0.05); }
+  tbody tr.non-bulk td:first-child::before {
+    content: '⚠';
+    margin-right: 6px;
+    color: var(--warn);
+    font-size: 10px;
+  }
+  td { padding: 7px 12px; white-space: nowrap; color: var(--text); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.pos { color: #4CAF50; }
+  td.neg { color: var(--danger); }
+  td.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Company color legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 2px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--muted);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .legend-item.muted { opacity: 0.35; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right: none; border-bottom: 1px solid var(--border); }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ULSD Import Dashboard — Mexico</h1>
+    <div class="subtitle">Ultra-Low Sulfur Diesel · Platts Differential Analysis</div>
+  </div>
+  <div class="badge" id="rowCountBadge">Loading…</div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar Filters -->
+  <aside>
+    <div class="filter-group">
+      <label>Importer / Company</label>
+      <select id="filterImporter" multiple title="Hold Ctrl/Cmd to select multiple">
+      </select>
+      <div class="filter-hint">Ctrl+click to multi-select</div>
+    </div>
+
+    <div class="filter-group">
+      <label>Transport Mode</label>
+      <select id="filterTransport" multiple>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Customs Office</label>
+      <select id="filterCustoms" multiple>
+      </select>
+      <div class="filter-hint">Ctrl+click to multi-select</div>
+    </div>
+
+    <div class="filter-group">
+      <label>Date Range</label>
+      <div class="date-row">
+        <input type="date" id="dateFrom" />
+        <input type="date" id="dateTo" />
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>Non-Bulk Cargolive Rows</label>
+      <label class="toggle-row" for="toggleNonBulk">
+        <span><span class="warn-dot"></span>Show flagged rows</span>
+        <div class="toggle">
+          <input type="checkbox" id="toggleNonBulk" />
+          <div class="toggle-slider"></div>
+        </div>
+      </label>
+      <div class="filter-hint">11 non-bulk Cargolive entries are flagged</div>
+    </div>
+
+    <button class="btn-reset" onclick="resetFilters()">↺ Reset all filters</button>
+  </aside>
+
+  <!-- Main content -->
+  <main>
+    <!-- KPI cards -->
+    <div class="metrics">
+      <div class="metric-card accent">
+        <div class="label">Transactions</div>
+        <div class="value" id="kpiTx">—</div>
+        <div class="sub" id="kpiTxSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Avg Differential</div>
+        <div class="value" id="kpiDiff">—</div>
+        <div class="sub">USD/gal weighted avg</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Avg Price Paid</div>
+        <div class="value" id="kpiPrice">—</div>
+        <div class="sub">USD/gal</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Total Volume</div>
+        <div class="value" id="kpiVol">—</div>
+        <div class="sub">gallons</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title" id="chartTitle">Differential (USD/gal) over Time</div>
+          <div class="chart-sub">Weekly average · per importer</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div class="agg-toggle">
+            <button class="active" data-agg="week" onclick="setAgg(this,'week')">Weekly</button>
+            <button data-agg="month" onclick="setAgg(this,'month')">Monthly</button>
+          </div>
+          <div class="metric-toggle">
+            <button class="active" data-metric="df" onclick="setMetric(this,'df','Differential (USD/gal)')">Differential</button>
+            <button data-metric="p" onclick="setMetric(this,'p','Price Paid (USD/gal)')">Price Paid</button>
+            <button data-metric="pl" onclick="setMetric(this,'pl','Platts (USD/gal)')">Platts</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="warnBanner" class="warn-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="warnText"></span>
+      </div>
+
+      <div class="legend" id="chartLegend"></div>
+
+      <div class="chart-wrap">
+        <canvas id="mainChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Raw Transactions</div>
+        <div class="row-count" id="tableCount">—</div>
+      </div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable('d')" id="th-d">Date <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('imp')" id="th-imp">Importer <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('co')" id="th-co">Customs Office <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('tm')" id="th-tm">Mode <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('df')" id="th-df">Differential <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('p')" id="th-p">Price Paid <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('pl')" id="th-pl">Platts <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('q')" id="th-q">Gallons <span class="sort-icon">↕</span></th>
+              <th>Bulk</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div id="noData" class="no-data" style="display:none;">No data matches the current filters.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Company color palette ──────────────────────────────────────────────
+const PALETTE = [
+  '#4f8ef7','#f5a623','#27ae60','#e74c3c','#9b59b6',
+  '#1abc9c','#e67e22','#3498db','#e91e63','#00bcd4',
+  '#8bc34a','#ff5722','#607d8b','#795548','#ff9800'
+];
+
+// Short display names for importers
+const SHORT_NAME = {
+  'BP ESTACIONES Y SERVICIOS ENERGETICOS SA DE CV': 'BP Estaciones',
+  'CARGOLIVE S. DE R.L. DE C.V.': 'Cargolive',
+  'COMBUSTIBLES DE ORIENTE SA CV': 'Combustibles de Oriente',
+  'COMERCIALIZADORA DE HIDROCARBUROS NOIL S A P I DE CV': 'NOIL',
+  'ENERGAS DE MEXICO SA DE CV': 'Energas de Mexico',
+  'EXXONMOBIL MEXICO SA DE CV': 'ExxonMobil Mexico',
+  'GLENCORE ENERGY MX SA DE CV': 'Glencore MX',
+  'INGEMAR SA DE CV': 'Ingemar',
+  'L.E. INTERNATIONAL FUEL SUPPLY SA DE CV': 'LE International',
+  'P.M.I. TRADING MEXICO SA DE CV': 'PMI Trading',
+  'PETROLEOS MEXICANOS': 'Pemex',
+  'PETROTAL SA DE CV': 'Petrotal',
+  'SHELL MEXICO SA DE CV': 'Shell Mexico',
+  'VALERO MARKETING AND SUPPLY DE MEXICO SA DE CV': 'Valero Mexico',
+  '"KOCH SUPPLY & TRADING MEXICO': 'Koch S&T Mexico',
+  '"TESORO MEXICO SUPPLY & MARKETING': 'Tesoro Mexico',
+};
+
+function shortName(s) { return SHORT_NAME[s] || s; }
+
+// ── State ─────────────────────────────────────────────────────────────
+let currentMetric = 'df';
+let currentAgg = 'week';
+let sortField = 'd';
+let sortDir = -1; // -1 desc, 1 asc
+let hiddenCompanies = new Set();
+let chart = null;
+let filteredData = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function getSelectedValues(el) {
+  return Array.from(el.selectedOptions).map(o => o.value);
+}
+
+function weekKey(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d.setDate(diff));
+  return mon.toISOString().slice(0,10);
+}
+
+function monthKey(dateStr) { return dateStr.slice(0,7) + '-01'; }
+
+function aggKey(dateStr, agg) { return agg === 'week' ? weekKey(dateStr) : monthKey(dateStr); }
+
+function fmt(v, decimals=4) {
+  if (v == null) return '—';
+  return v.toFixed(decimals);
+}
+
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+// ── Populate filters ─────────────────────────────────────────────────
+function populateFilters() {
+  const importers = [...new Set(RAW_DATA.map(r => r.imp))].sort();
+  const transports = [...new Set(RAW_DATA.map(r => r.tm))].sort();
+  const customs = [...new Set(RAW_DATA.map(r => r.co))].sort();
+
+  const impSel = document.getElementById('filterImporter');
+  importers.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = shortName(v);
+    impSel.appendChild(o);
+  });
+
+  const tmSel = document.getElementById('filterTransport');
+  transports.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    tmSel.appendChild(o);
+  });
+
+  const coSel = document.getElementById('filterCustoms');
+  customs.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    coSel.appendChild(o);
+  });
+
+  // Date range defaults
+  const dates = RAW_DATA.map(r => r.d).sort();
+  document.getElementById('dateFrom').value = dates[0];
+  document.getElementById('dateTo').value = dates[dates.length-1];
+}
+
+// ── Apply filters ─────────────────────────────────────────────────────
+function applyFilters() {
+  const selImporters = getSelectedValues(document.getElementById('filterImporter'));
+  const selTransports = getSelectedValues(document.getElementById('filterTransport'));
+  const selCustoms = getSelectedValues(document.getElementById('filterCustoms'));
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  const showNonBulk = document.getElementById('toggleNonBulk').checked;
+
+  filteredData = RAW_DATA.filter(r => {
+    if (selImporters.length && !selImporters.includes(r.imp)) return false;
+    if (selTransports.length && !selTransports.includes(r.tm)) return false;
+    if (selCustoms.length && !selCustoms.includes(r.co)) return false;
+    if (dateFrom && r.d < dateFrom) return false;
+    if (dateTo && r.d > dateTo) return false;
+    // Non-bulk Cargolive: exclude unless toggle is on
+    if (!r.b && !showNonBulk) return false;
+    return true;
+  });
+
+  updateKPIs();
+  updateChart();
+  updateTable();
+  updateWarningBanner();
+  updateRowBadge();
+}
+
+function updateRowBadge() {
+  document.getElementById('rowCountBadge').textContent = filteredData.length.toLocaleString() + ' rows';
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────
+function updateKPIs() {
+  const n = filteredData.length;
+  const companies = new Set(filteredData.map(r => r.imp)).size;
+  document.getElementById('kpiTx').textContent = n.toLocaleString();
+  document.getElementById('kpiTxSub').textContent = companies + ' importer' + (companies !== 1 ? 's' : '');
+
+  let totalQ = 0, sumDiff = 0, sumPrice = 0, validD = 0, validP = 0;
+  for (const r of filteredData) {
+    const q = r.q || 0;
+    totalQ += q;
+    if (r.df != null) { sumDiff += r.df * q; validD += q; }
+    if (r.p != null)  { sumPrice += r.p * q; validP += q; }
+  }
+
+  document.getElementById('kpiDiff').textContent = validD ? '$' + (sumDiff/validD).toFixed(4) : '—';
+  document.getElementById('kpiPrice').textContent = validP ? '$' + (sumPrice/validP).toFixed(4) : '—';
+  document.getElementById('kpiVol').textContent = fmtNum(totalQ);
+}
+
+// ── Warning banner ────────────────────────────────────────────────────
+function updateWarningBanner() {
+  const nonBulk = filteredData.filter(r => !r.b);
+  const banner = document.getElementById('warnBanner');
+  if (nonBulk.length > 0) {
+    banner.classList.add('visible');
+    document.getElementById('warnText').textContent =
+      `${nonBulk.length} non-bulk Cargolive row${nonBulk.length>1?'s':''} included in view. These are likely non-commercial fuel deliveries (e.g. Formula One). Differentials may not be representative.`;
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────
+const METRIC_LABELS = { df: 'Differential (USD/gal)', p: 'Price Paid (USD/gal)', pl: 'Platts (USD/gal)' };
+
+function buildChartData() {
+  // Group by company → aggKey → weighted avg
+  const companies = [...new Set(filteredData.map(r => r.imp))].sort();
+  const dateMap = {}; // company → { key → {sum, weight} }
+
+  for (const r of filteredData) {
+    if (r[currentMetric] == null) continue;
+    const key = aggKey(r.d, currentAgg);
+    if (!dateMap[r.imp]) dateMap[r.imp] = {};
+    if (!dateMap[r.imp][key]) dateMap[r.imp][key] = { sum: 0, w: 0 };
+    const w = r.q || 1;
+    dateMap[r.imp][key].sum += r[currentMetric] * w;
+    dateMap[r.imp][key].w += w;
+  }
+
+  const allKeys = [...new Set(Object.values(dateMap).flatMap(d => Object.keys(d)))].sort();
+
+  const datasets = companies
+    .filter(c => dateMap[c] && Object.keys(dateMap[c]).length > 0)
+    .map((c, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      return {
+        label: shortName(c),
+        fullLabel: c,
+        data: allKeys.map(k => {
+          const entry = dateMap[c]?.[k];
+          return entry ? { x: k, y: +(entry.sum / entry.w).toFixed(4) } : null;
+        }).filter(p => p !== null),
+        borderColor: color,
+        backgroundColor: color + '22',
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+        tension: 0.3,
+        spanGaps: false,
+        hidden: hiddenCompanies.has(c),
+      };
+    });
+
+  return datasets;
+}
+
+function updateChart() {
+  const datasets = buildChartData();
+  document.getElementById('chartTitle').textContent = METRIC_LABELS[currentMetric] + ' over Time';
+
+  if (chart) {
+    chart.data.datasets = datasets;
+    chart.update('none');
+  } else {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1d27',
+            borderColor: '#2a2d3e',
+            borderWidth: 1,
+            titleColor: '#e8eaf0',
+            bodyColor: '#7a7f96',
+            padding: 10,
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(4)}/gal`
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { unit: currentAgg === 'week' ? 'week' : 'month', tooltipFormat: 'MMM d, yyyy' },
+            grid: { color: 'rgba(42,45,62,0.5)' },
+            ticks: { color: '#7a7f96', maxTicksLimit: 12 }
+          },
+          y: {
+            grid: { color: 'rgba(42,45,62,0.5)' },
+            ticks: {
+              color: '#7a7f96',
+              callback: v => '$' + v.toFixed(2)
+            }
+          }
+        }
+      }
+    });
+  }
+
+  buildLegend(datasets);
+}
+
+function buildLegend(datasets) {
+  const legend = document.getElementById('chartLegend');
+  legend.innerHTML = '';
+  datasets.forEach((ds, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (ds.hidden ? ' muted' : '');
+    item.innerHTML = `<div class="legend-dot" style="background:${ds.borderColor}"></div><span>${ds.label}</span>`;
+    item.onclick = () => toggleCompany(ds.fullLabel, item, i);
+    legend.appendChild(item);
+  });
+}
+
+function toggleCompany(fullLabel, el, dsIdx) {
+  if (hiddenCompanies.has(fullLabel)) {
+    hiddenCompanies.delete(fullLabel);
+    el.classList.remove('muted');
+  } else {
+    hiddenCompanies.add(fullLabel);
+    el.classList.add('muted');
+  }
+  if (chart && chart.data.datasets[dsIdx]) {
+    chart.data.datasets[dsIdx].hidden = hiddenCompanies.has(fullLabel);
+    chart.update();
+  }
+}
+
+// ── Table ─────────────────────────────────────────────────────────────
+const TABLE_PAGE = 500;
+
+function updateTable() {
+  const sorted = [...filteredData].sort((a, b) => {
+    let av = a[sortField], bv = b[sortField];
+    if (av == null) av = sortDir > 0 ? Infinity : -Infinity;
+    if (bv == null) bv = sortDir > 0 ? Infinity : -Infinity;
+    if (typeof av === 'string') return av.localeCompare(bv) * sortDir;
+    return (av - bv) * sortDir;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  const noData = document.getElementById('noData');
+  document.getElementById('tableCount').textContent = sorted.length.toLocaleString() + ' rows' + (sorted.length > TABLE_PAGE ? ` (showing first ${TABLE_PAGE})` : '');
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = '';
+    noData.style.display = 'block';
+    return;
+  }
+  noData.style.display = 'none';
+
+  const rows = sorted.slice(0, TABLE_PAGE);
+  tbody.innerHTML = rows.map(r => {
+    const diffClass = r.df != null ? (r.df >= 0 ? 'pos' : 'neg') : '';
+    const modeColors = { ROAD: '#4f8ef7', MARITIME: '#27ae60', PIPELINE: '#9b59b6', RAIL: '#f5a623' };
+    const mc = modeColors[r.tm] || '#7a7f96';
+    const rowClass = r.b ? '' : 'non-bulk';
+    return `<tr class="${rowClass}">
+      <td>${r.d}</td>
+      <td title="${r.imp}">${shortName(r.imp)}</td>
+      <td>${r.co}</td>
+      <td><span class="tag" style="background:${mc}22;color:${mc}">${r.tm}</span></td>
+      <td class="num ${diffClass}">${r.df != null ? '$' + fmt(r.df) : '—'}</td>
+      <td class="num">${r.p != null ? '$' + fmt(r.p) : '—'}</td>
+      <td class="num">${r.pl != null ? '$' + fmt(r.pl) : '—'}</td>
+      <td class="num">${r.q != null ? r.q.toLocaleString() : '—'}</td>
+      <td style="color:${r.b ? 'var(--green)' : 'var(--warn)'}">${r.b ? '✓' : '⚠'}</td>
+    </tr>`;
+  }).join('');
+
+  // Update sort icons
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+  const activeTh = document.getElementById('th-' + sortField);
+  if (activeTh) {
+    activeTh.classList.add('sorted');
+    activeTh.querySelector('.sort-icon').textContent = sortDir > 0 ? '↑' : '↓';
+  }
+}
+
+function sortTable(field) {
+  if (sortField === field) { sortDir *= -1; }
+  else { sortField = field; sortDir = -1; }
+  updateTable();
+}
+
+// ── Controls ──────────────────────────────────────────────────────────
+function setMetric(btn, metric, label) {
+  currentMetric = metric;
+  document.querySelectorAll('.metric-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateChart();
+}
+
+function setAgg(btn, agg) {
+  currentAgg = agg;
+  document.querySelectorAll('.agg-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (chart) {
+    chart.options.scales.x.time.unit = agg === 'week' ? 'week' : 'month';
+  }
+  updateChart();
+}
+
+function resetFilters() {
+  document.getElementById('filterImporter').selectedIndex = -1;
+  document.getElementById('filterTransport').selectedIndex = -1;
+  document.getElementById('filterCustoms').selectedIndex = -1;
+  const dates = RAW_DATA.map(r => r.d).sort();
+  document.getElementById('dateFrom').value = dates[0];
+  document.getElementById('dateTo').value = dates[dates.length-1];
+  document.getElementById('toggleNonBulk').checked = false;
+  hiddenCompanies.clear();
+  applyFilters();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────
+['filterImporter','filterTransport','filterCustoms','dateFrom','dateTo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+document.getElementById('toggleNonBulk').addEventListener('change', applyFilters);
+
+// ── Init ──────────────────────────────────────────────────────────────
+populateFilters();
+applyFilters();
+</script>
+</body>
+</html>
