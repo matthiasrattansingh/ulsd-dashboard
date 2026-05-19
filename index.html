@@ -3,728 +3,765 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ULSD Import Dashboard — Mexico</title>
+<title>ULSD Mexico Import Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="ulsd_data.js"></script>
+<script src="ulsd_data_v2.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--surface:#0d1526;--surface2:#111d35;--border:#1e2d4a;
+  --text:#e2e8f0;--muted:#64748b;--accent:#38bdf8;
+  --maritime:#38bdf8;--rail:#f59e0b;--road:#10b981;--pipeline:#a78bfa;
+  --font:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden}
+/* LAYOUT */
+#app{display:grid;grid-template-rows:44px 1fr;height:100vh}
+header{
+  display:flex;align-items:center;gap:12px;padding:0 18px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+header h1{font-size:15px;font-weight:700;letter-spacing:-0.3px;white-space:nowrap}
+header .pipe{color:var(--border);margin:0 4px}
+header .stat{color:var(--muted);font-size:11px}
+header .stat span{color:var(--text);font-weight:600}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.mode-legend{display:flex;gap:10px}
+.mode-pip{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.mode-pip .dot{width:8px;height:8px;border-radius:50%}
 
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --border: #2a2d3e;
-    --accent: #4f8ef7;
-    --warn: #f5a623;
-    --danger: #e74c3c;
-    --text: #e8eaf0;
-    --muted: #7a7f96;
-    --green: #27ae60;
-    --font: 'Inter', system-ui, -apple-system, sans-serif;
-  }
+#body{display:grid;grid-template-columns:210px 1fr;overflow:hidden;height:100%}
+aside{
+  background:var(--surface);border-right:1px solid var(--border);
+  padding:14px 12px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;
+}
+.fg-label{
+  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;display:block;
+}
+.fg-select{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);padding:5px 8px;font-size:12px;appearance:none;cursor:pointer;
+  transition:border-color .15s;
+}
+.fg-select:focus{outline:none;border-color:var(--accent)}
+.fg-select[multiple]{height:auto;min-height:80px;padding:3px}
+.fg-select[multiple] option{padding:4px 6px;border-radius:3px;cursor:pointer}
+.fg-select[multiple] option:checked{background:var(--accent);color:#000}
+.fg-hint{font-size:10px;color:var(--muted);margin-top:3px}
+.range-vals{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.date-row input{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);padding:4px 6px;font-size:11px;
+}
+.date-row input:focus{outline:none;border-color:var(--accent)}
+.reset-btn{
+  width:100%;background:transparent;border:1px solid var(--border);border-radius:5px;
+  color:var(--muted);padding:7px;font-size:11px;cursor:pointer;transition:all .15s;
+  margin-top:auto;
+}
+.reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.selected-loc-list{display:flex;flex-wrap:wrap;gap:4px;min-height:16px}
+.loc-chip{
+  background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);
+  border-radius:3px;padding:2px 6px;font-size:10px;color:var(--accent);
+  display:flex;align-items:center;gap:4px;cursor:pointer;
+}
+.loc-chip:hover{background:rgba(56,189,248,.2)}
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+main{display:flex;flex-direction:column;overflow:hidden;height:100%}
+.panel{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+.panel-map{flex:0 0 42%}
+.panel-chart{flex:0 0 33%}
+.panel-cards{flex:1;overflow-y:auto}
+.panel-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
+  background:var(--surface);
+}
+.panel-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.panel-body{flex:1;position:relative;overflow:hidden}
 
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
-  header .subtitle { color: var(--muted); font-size: 13px; }
-  header .badge {
-    margin-left: auto;
-    background: #1e3a5f;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
+/* MAP */
+#map{width:100%;height:100%;display:block}
+.map-tooltip{
+  position:absolute;pointer-events:none;background:rgba(13,21,38,.95);
+  border:1px solid var(--border);border-radius:6px;padding:8px 11px;
+  font-size:11px;line-height:1.6;z-index:10;white-space:nowrap;display:none;
+}
+.map-tooltip .t-name{font-weight:700;font-size:12px;color:var(--text);margin-bottom:2px}
+.map-tooltip .t-row{color:var(--muted)}
+.map-tooltip .t-row span{color:var(--text);font-weight:600}
 
-  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 57px); }
+/* CHART */
+.chart-controls{display:flex;gap:6px;align-items:center}
+.tog-group{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.tog-btn{
+  background:transparent;border:none;color:var(--muted);
+  padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.tog-btn.active{background:var(--accent);color:#000;font-weight:600}
+.tog-btn:hover:not(.active){color:var(--text)}
+#chartCanvas{position:absolute;inset:8px}
 
-  /* Sidebar */
-  aside {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 20px 16px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+/* KPI CARDS */
+#cardsGrid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;padding:12px;
+}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;border-left-width:3px;position:relative;
+  transition:border-color .2s,transform .1s;cursor:default;
+}
+.kpi-card:hover{transform:translateY(-1px)}
+.kpi-rank{
+  position:absolute;top:8px;right:10px;font-size:9px;
+  color:var(--muted);font-weight:700;letter-spacing:.5px;
+}
+.kpi-name{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-diff{font-size:22px;font-weight:800;letter-spacing:-1px;line-height:1}
+.kpi-diff-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:1px;margin-bottom:10px}
+.kpi-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:8px}
+.kpi-m{display:flex;flex-direction:column}
+.kpi-m-val{font-size:12px;font-weight:600;color:var(--text)}
+.kpi-m-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi-bar{height:2px;border-radius:1px;margin-top:8px;opacity:.4}
 
-  .filter-group label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
+/* Chart legend */
+#chartLegend{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 0}
+.leg-item{
+  display:flex;align-items:center;gap:5px;font-size:11px;
+  color:var(--muted);cursor:pointer;transition:opacity .15s;padding:2px 4px;border-radius:3px;
+}
+.leg-item:hover{color:var(--text)}
+.leg-item.hidden{opacity:.3}
+.leg-dot{width:10px;height:2px;border-radius:1px;flex-shrink:0}
 
-  .filter-group select, .filter-group input[type="date"] {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    padding: 7px 10px;
-    font-size: 13px;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .filter-group select:focus, .filter-group input[type="date"]:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  .filter-group select[multiple] { height: auto; min-height: 120px; padding: 4px; }
-  .filter-group select[multiple] option {
-    padding: 5px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .filter-group select[multiple] option:checked { background: var(--accent); color: #fff; }
-
-  .filter-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
-
-  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .date-row input { font-size: 12px; }
-
-  /* Cargolive toggle */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .toggle-row span { font-size: 12px; }
-  .toggle-row .warn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: inline-block; margin-right: 6px; }
-  .toggle { position: relative; width: 36px; height: 20px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; inset: 0;
-    background: var(--border);
-    border-radius: 20px;
-    transition: background 0.2s;
-  }
-  .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    left: 3px; top: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--warn); }
-  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
-
-  .btn-reset {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    padding: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-top: auto;
-  }
-  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Main content */
-  main { padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
-
-  /* Metric cards */
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-  }
-  .metric-card .label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
-  .metric-card .value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-  .metric-card .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .metric-card.accent { border-color: rgba(79,142,247,0.3); }
-
-  /* Chart card */
-  .chart-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .chart-title { font-size: 14px; font-weight: 600; }
-  .chart-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .metric-toggle {
-    display: flex;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .metric-toggle button {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .metric-toggle button.active { background: var(--accent); color: white; }
-  .metric-toggle button:hover:not(.active) { color: var(--text); }
-
-  .agg-toggle {
-    display: flex;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .agg-toggle button {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 5px 10px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .agg-toggle button.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); margin: -1px; border-radius: 5px; }
-  .agg-toggle button:hover:not(.active) { color: var(--text); }
-
-  .chart-wrap { position: relative; flex: 1; min-height: 320px; }
-  canvas { position: absolute; inset: 0; }
-
-  /* Warning banner */
-  .warn-banner {
-    background: rgba(245,166,35,0.1);
-    border: 1px solid rgba(245,166,35,0.4);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
-    color: var(--warn);
-    display: none;
-    align-items: center;
-    gap: 8px;
-  }
-  .warn-banner.visible { display: flex; }
-  .warn-banner svg { flex-shrink: 0; }
-
-  /* Bottom row: table */
-  .table-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .table-card .table-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-card .table-title { font-size: 13px; font-weight: 600; }
-  .table-card .row-count { font-size: 11px; color: var(--muted); }
-
-  .table-scroll { overflow-x: auto; max-height: 260px; overflow-y: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead { position: sticky; top: 0; z-index: 1; }
-  thead tr { background: var(--bg); }
-  th {
-    padding: 8px 12px;
-    text-align: left;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    cursor: pointer;
-    user-select: none;
-  }
-  th:hover { color: var(--text); }
-  th .sort-icon { opacity: 0.4; margin-left: 3px; }
-  th.sorted .sort-icon { opacity: 1; color: var(--accent); }
-
-  tbody tr { border-bottom: 1px solid rgba(42,45,62,0.6); transition: background 0.1s; }
-  tbody tr:hover { background: rgba(79,142,247,0.05); }
-  tbody tr.non-bulk { background: rgba(245,166,35,0.05); }
-  tbody tr.non-bulk td:first-child::before {
-    content: '⚠';
-    margin-right: 6px;
-    color: var(--warn);
-    font-size: 10px;
-  }
-  td { padding: 7px 12px; white-space: nowrap; color: var(--text); }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.pos { color: #4CAF50; }
-  td.neg { color: var(--danger); }
-  td.tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-  }
-
-  .no-data {
-    text-align: center;
-    padding: 48px 20px;
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  /* Company color legend */
-  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 2px; }
-  .legend-item {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: var(--muted);
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .legend-item.muted { opacity: 0.35; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    aside { border-right: none; border-bottom: 1px solid var(--border); }
-    .metrics { grid-template-columns: repeat(2, 1fr); }
-  }
+/* no data */
+.no-data-msg{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
-
+<div id="app">
 <header>
-  <div>
-    <h1>ULSD Import Dashboard — Mexico</h1>
-    <div class="subtitle">Ultra-Low Sulfur Diesel · Platts Differential Analysis</div>
+  <h1>ULSD Mexico Import Dashboard</h1>
+  <span class="pipe">|</span>
+  <div class="stat">Transactions <span id="hdrTx">—</span></div>
+  <span class="pipe">|</span>
+  <div class="stat">Total Volume <span id="hdrVol">—</span></div>
+  <span class="pipe">|</span>
+  <div class="stat">Avg Differential <span id="hdrDiff">—</span></div>
+  <div class="header-right">
+    <div class="mode-legend">
+      <div class="mode-pip"><div class="dot" style="background:var(--maritime)"></div>Maritime</div>
+      <div class="mode-pip"><div class="dot" style="background:var(--rail)"></div>Rail</div>
+      <div class="mode-pip"><div class="dot" style="background:var(--road)"></div>Road</div>
+      <div class="mode-pip"><div class="dot" style="background:var(--pipeline)"></div>Pipeline</div>
+    </div>
   </div>
-  <div class="badge" id="rowCountBadge">Loading…</div>
 </header>
 
-<div class="layout">
-  <!-- Sidebar Filters -->
-  <aside>
-    <div class="filter-group">
-      <label>Importer / Company</label>
-      <select id="filterImporter" multiple title="Hold Ctrl/Cmd to select multiple">
-      </select>
-      <div class="filter-hint">Ctrl+click to multi-select</div>
+<div id="body">
+<aside>
+  <div>
+    <label class="fg-label">Importer</label>
+    <select id="fImporter" class="fg-select" multiple></select>
+    <div class="fg-hint">Ctrl+click to multi-select</div>
+  </div>
+  <div>
+    <label class="fg-label">Transport Mode</label>
+    <select id="fMode" class="fg-select" multiple></select>
+  </div>
+  <div>
+    <label class="fg-label">Date Range</label>
+    <div class="date-row">
+      <input type="month" id="fDateFrom">
+      <input type="month" id="fDateTo">
     </div>
+  </div>
+  <div>
+    <label class="fg-label">Selected Locations</label>
+    <div class="selected-loc-list" id="selLocList"><span style="font-size:10px;color:var(--muted)">Click map dots to filter</span></div>
+  </div>
+  <button class="reset-btn" onclick="resetAll()">↺ Reset All Filters</button>
+</aside>
 
-    <div class="filter-group">
-      <label>Transport Mode</label>
-      <select id="filterTransport" multiple>
-      </select>
+<main>
+  <!-- MAP PANEL -->
+  <div class="panel panel-map">
+    <div class="panel-hdr">
+      <span class="panel-title">Import Routes from USGC</span>
+      <span style="font-size:10px;color:var(--muted)">Click a port to filter · bubble = volume</span>
     </div>
-
-    <div class="filter-group">
-      <label>Customs Office</label>
-      <select id="filterCustoms" multiple>
-      </select>
-      <div class="filter-hint">Ctrl+click to multi-select</div>
+    <div class="panel-body" id="mapContainer">
+      <svg id="map" viewBox="0 0 740 440" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+      <div class="map-tooltip" id="mapTooltip"></div>
     </div>
+  </div>
 
-    <div class="filter-group">
-      <label>Date Range</label>
-      <div class="date-row">
-        <input type="date" id="dateFrom" />
-        <input type="date" id="dateTo" />
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>Non-Bulk Cargolive Rows</label>
-      <label class="toggle-row" for="toggleNonBulk">
-        <span><span class="warn-dot"></span>Show flagged rows</span>
-        <div class="toggle">
-          <input type="checkbox" id="toggleNonBulk" />
-          <div class="toggle-slider"></div>
-        </div>
-      </label>
-      <div class="filter-hint">11 non-bulk Cargolive entries are flagged</div>
-    </div>
-
-    <button class="btn-reset" onclick="resetFilters()">↺ Reset all filters</button>
-  </aside>
-
-  <!-- Main content -->
-  <main>
-    <!-- KPI cards -->
-    <div class="metrics">
-      <div class="metric-card accent">
-        <div class="label">Transactions</div>
-        <div class="value" id="kpiTx">—</div>
-        <div class="sub" id="kpiTxSub">—</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Avg Differential</div>
-        <div class="value" id="kpiDiff">—</div>
-        <div class="sub">USD/gal weighted avg</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Avg Price Paid</div>
-        <div class="value" id="kpiPrice">—</div>
-        <div class="sub">USD/gal</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Total Volume</div>
-        <div class="value" id="kpiVol">—</div>
-        <div class="sub">gallons</div>
-      </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-card">
-      <div class="chart-header">
-        <div>
-          <div class="chart-title" id="chartTitle">Differential (USD/gal) over Time</div>
-          <div class="chart-sub">Weekly average · per importer</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <div class="agg-toggle">
-            <button class="active" data-agg="week" onclick="setAgg(this,'week')">Weekly</button>
-            <button data-agg="month" onclick="setAgg(this,'month')">Monthly</button>
-          </div>
-          <div class="metric-toggle">
-            <button class="active" data-metric="df" onclick="setMetric(this,'df','Differential (USD/gal)')">Differential</button>
-            <button data-metric="p" onclick="setMetric(this,'p','Price Paid (USD/gal)')">Price Paid</button>
-            <button data-metric="pl" onclick="setMetric(this,'pl','Platts (USD/gal)')">Platts</button>
-          </div>
+  <!-- CHART PANEL -->
+  <div class="panel panel-chart">
+    <div class="panel-hdr">
+      <span class="panel-title" id="chartTitle">Differential (USD/gal) — Monthly Avg</span>
+      <div class="chart-controls">
+        <div class="tog-group">
+          <button class="tog-btn active" onclick="setMetric('df',this)">Differential</button>
+          <button class="tog-btn" onclick="setMetric('price',this)">Price Paid</button>
+          <button class="tog-btn" onclick="setMetric('platts',this)">Platts</button>
         </div>
       </div>
-
-      <div id="warnBanner" class="warn-banner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span id="warnText"></span>
-      </div>
-
-      <div class="legend" id="chartLegend"></div>
-
-      <div class="chart-wrap">
-        <canvas id="mainChart"></canvas>
-      </div>
     </div>
-
-    <!-- Data table -->
-    <div class="table-card">
-      <div class="table-header">
-        <div class="table-title">Raw Transactions</div>
-        <div class="row-count" id="tableCount">—</div>
-      </div>
-      <div class="table-scroll">
-        <table id="dataTable">
-          <thead>
-            <tr>
-              <th onclick="sortTable('d')" id="th-d">Date <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('imp')" id="th-imp">Importer <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('co')" id="th-co">Customs Office <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('tm')" id="th-tm">Mode <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('df')" id="th-df">Differential <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('p')" id="th-p">Price Paid <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('pl')" id="th-pl">Platts <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('q')" id="th-q">Gallons <span class="sort-icon">↕</span></th>
-              <th>Bulk</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-        <div id="noData" class="no-data" style="display:none;">No data matches the current filters.</div>
-      </div>
+    <div id="chartLegend"></div>
+    <div class="panel-body">
+      <canvas id="chartCanvas"></canvas>
     </div>
-  </main>
+  </div>
+
+  <!-- CARDS PANEL -->
+  <div class="panel panel-cards">
+    <div class="panel-hdr">
+      <span class="panel-title">Company KPIs — sorted by avg differential ↑</span>
+      <span id="cardsSubtitle" style="font-size:10px;color:var(--muted)"></span>
+    </div>
+    <div id="cardsGrid"></div>
+  </div>
+</main>
+</div>
 </div>
 
 <script>
-// ── Company color palette ──────────────────────────────────────────────
-const PALETTE = [
-  '#4f8ef7','#f5a623','#27ae60','#e74c3c','#9b59b6',
-  '#1abc9c','#e67e22','#3498db','#e91e63','#00bcd4',
-  '#8bc34a','#ff5722','#607d8b','#795548','#ff9800'
-];
+/* ── Constants ─────────────────────────────────────────────────────────── */
+const MODE_COLOR = { MARITIME:'#38bdf8', RAIL:'#f59e0b', ROAD:'#10b981', PIPELINE:'#a78bfa' };
+const MODE_EMOJI = { MARITIME:'⬤', RAIL:'⬤', ROAD:'⬤', PIPELINE:'⬤' };
+const MODE_DASH = { MARITIME:'none', RAIL:'none', ROAD:'none', PIPELINE:'8,6' };
 
-// Short display names for importers
-const SHORT_NAME = {
-  'BP ESTACIONES Y SERVICIOS ENERGETICOS SA DE CV': 'BP Estaciones',
-  'CARGOLIVE S. DE R.L. DE C.V.': 'Cargolive',
-  'COMBUSTIBLES DE ORIENTE SA CV': 'Combustibles de Oriente',
-  'COMERCIALIZADORA DE HIDROCARBUROS NOIL S A P I DE CV': 'NOIL',
-  'ENERGAS DE MEXICO SA DE CV': 'Energas de Mexico',
-  'EXXONMOBIL MEXICO SA DE CV': 'ExxonMobil Mexico',
-  'GLENCORE ENERGY MX SA DE CV': 'Glencore MX',
-  'INGEMAR SA DE CV': 'Ingemar',
-  'L.E. INTERNATIONAL FUEL SUPPLY SA DE CV': 'LE International',
-  'P.M.I. TRADING MEXICO SA DE CV': 'PMI Trading',
-  'PETROLEOS MEXICANOS': 'Pemex',
-  'PETROTAL SA DE CV': 'Petrotal',
-  'SHELL MEXICO SA DE CV': 'Shell Mexico',
-  'VALERO MARKETING AND SUPPLY DE MEXICO SA DE CV': 'Valero Mexico',
-  '"KOCH SUPPLY & TRADING MEXICO': 'Koch S&T Mexico',
-  '"TESORO MEXICO SUPPLY & MARKETING': 'Tesoro Mexico',
+const COMPANY_COLORS = {
+  'Pemex':               '#94a3b8',
+  'Valero Mexico':       '#60a5fa',
+  'ExxonMobil Mexico':   '#f87171',
+  'Tesoro Mexico':       '#fb923c',
+  'Koch Mexico':         '#c084fc',
+  'Shell Mexico':        '#fcd34d',
+  'Energas':             '#34d399',
+  'Glencore Mexico':     '#f472b6',
+  'Ingemar':             '#a5f3fc',
+  'LE Intl Fuel':        '#fdba74',
+  'NOIL':                '#6ee7b7',
+  'PMI Trading':         '#c7d2fe',
+  'Combustibles de Oriente':'#86efac',
+  'BP Estaciones':       '#818cf8',
+  'Petrotal':            '#fca5a5',
 };
 
-function shortName(s) { return SHORT_NAME[s] || s; }
+const DEFAULT_COMPANIES = ['Pemex','Valero Mexico','ExxonMobil Mexico','Tesoro Mexico','Koch Mexico','Shell Mexico'];
 
-// ── State ─────────────────────────────────────────────────────────────
-let currentMetric = 'df';
-let currentAgg = 'week';
-let sortField = 'd';
-let sortDir = -1; // -1 desc, 1 asc
-let hiddenCompanies = new Set();
-let chart = null;
-let filteredData = [];
+// Correct coordinates for map city dots (override any data errors)
+const CITY_COORDS = {
+  'Veracruz':     [19.189,-96.132], 'Tuxpan':         [20.956,-97.408],
+  'Tampico':      [22.233,-97.861], 'Altamira':        [22.4,-97.917],
+  'Progreso':     [21.281,-89.663], 'Ciudad del Carmen':[18.65,-91.833],
+  'Coatzacoalcos':[18.135,-94.453], 'Dos Bocas':       [18.423,-93.183],
+  'Manzanillo':   [19.052,-104.318],'Acapulco':        [16.853,-99.823],
+  'Mazatlan':     [23.241,-106.406],'Topolobampo':     [25.601,-109.052],
+  'Guaymas':      [27.921,-110.887],'La Paz':          [24.143,-110.311],
+  'Ensenada':     [31.867,-116.596],'Lazaro Cardenas': [17.958,-102.188],
+  'Matamoros':    [25.869,-97.504], 'Reynosa':         [26.083,-98.295],
+  'Nuevo Laredo': [27.477,-99.516], 'Piedras Negras':  [28.7,-100.524],
+  'Ciudad Juarez':[31.738,-106.487],'Nogales':         [31.303,-110.939],
+  'Mexicali':     [32.625,-115.453],'Ciudad Camargo':  [26.316,-98.833],
+};
 
-// ── Helpers ───────────────────────────────────────────────────────────
-function getSelectedValues(el) {
-  return Array.from(el.selectedOptions).map(o => o.value);
+const METRIC_LABELS = { df:'Differential (USD/gal) — Monthly Avg', price:'Price Paid (USD/gal) — Monthly Avg', platts:'Platts (USD/gal) — Monthly Avg' };
+const F = { month:0, imp:1, loc:2, mode:3, gal:4, price:5, platts:6, df:7, n:8 };
+
+/* ── Projection ─────────────────────────────────────────────────────────── */
+const MAP_W=740, MAP_H=440, LON_MIN=-120, LAT_MAX=35, LON_RNG=37, LAT_RNG=22;
+const proj = (lon,lat) => [(lon-LON_MIN)/LON_RNG*MAP_W, (LAT_MAX-lat)/LAT_RNG*MAP_H];
+const f = v => Math.round(v*10)/10;
+
+/* ── Mexico Geo ─────────────────────────────────────────────────────────── */
+const MAINLAND = [
+  // N border W→E
+  [-115.5,32.5],[-112.5,31.5],[-111.0,31.3],[-109.5,31.3],
+  [-106.5,31.7],[-104.5,29.5],[-102.5,29.5],[-100.5,28.7],
+  [-99.5,27.5],[-98.3,26.1],[-97.5,26.0],
+  // Gulf coast S
+  [-97.6,23.5],[-97.8,22.2],[-97.5,21.0],[-97.1,20.7],[-96.1,19.2],
+  [-94.5,18.1],[-93.2,18.4],[-91.8,18.7],[-90.0,19.5],[-89.7,21.3],
+  // Yucatan NE + E coast
+  [-87.1,21.5],[-87.5,19.5],[-87.8,18.5],
+  // SE corner + S border
+  [-88.0,17.8],[-89.2,17.8],[-92.0,14.5],[-92.0,15.7],
+  // Pacific coast N
+  [-94.7,16.2],[-97.0,16.0],[-99.8,16.9],[-102.2,18.0],
+  [-104.3,19.1],[-105.8,20.3],[-106.4,23.2],[-109.1,25.6],[-110.9,27.9],
+  // Gulf of California E shore → NW
+  [-111.5,29.0],[-112.5,30.0],[-113.5,31.3],[-114.5,31.8],[-115.5,32.5]
+];
+
+const BAJA = [
+  // Pacific coast S
+  [-117.1,32.5],[-116.6,31.9],[-115.8,30.5],[-115.0,29.5],
+  [-114.3,28.5],[-113.5,27.5],[-112.3,26.5],[-110.8,25.0],[-109.9,22.9],
+  // Gulf side N
+  [-110.3,24.1],[-111.0,25.8],[-112.1,27.2],
+  [-113.0,28.5],[-114.0,29.7],[-114.7,30.8],
+  [-115.2,31.8],[-116.0,32.3],[-117.1,32.5]
+];
+
+function polyPoints(coords) {
+  return coords.map(([lon,lat]) => proj(lon,lat).map(f).join(',')).join(' ');
 }
 
-function weekKey(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d.setDate(diff));
-  return mon.toISOString().slice(0,10);
-}
+/* ── State ───────────────────────────────────────────────────────────────── */
+const state = {
+  importers: new Set(DEFAULT_COMPANIES),
+  modes: new Set(['MARITIME','RAIL','ROAD','PIPELINE']),
+  locs: new Set(),
+  dateFrom: '', dateTo: '',
+  metric: 'df',
+  hiddenCompanies: new Set(),
+};
 
-function monthKey(dateStr) { return dateStr.slice(0,7) + '-01'; }
-
-function aggKey(dateStr, agg) { return agg === 'week' ? weekKey(dateStr) : monthKey(dateStr); }
-
-function fmt(v, decimals=4) {
-  if (v == null) return '—';
-  return v.toFixed(decimals);
-}
-
-function fmtNum(n) {
-  if (n == null || isNaN(n)) return '—';
-  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
-  return n.toFixed(0);
-}
-
-// ── Populate filters ─────────────────────────────────────────────────
-function populateFilters() {
-  const importers = [...new Set(RAW_DATA.map(r => r.imp))].sort();
-  const transports = [...new Set(RAW_DATA.map(r => r.tm))].sort();
-  const customs = [...new Set(RAW_DATA.map(r => r.co))].sort();
-
-  const impSel = document.getElementById('filterImporter');
-  importers.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = shortName(v);
-    impSel.appendChild(o);
-  });
-
-  const tmSel = document.getElementById('filterTransport');
-  transports.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    tmSel.appendChild(o);
-  });
-
-  const coSel = document.getElementById('filterCustoms');
-  customs.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    coSel.appendChild(o);
-  });
-
-  // Date range defaults
-  const dates = RAW_DATA.map(r => r.d).sort();
-  document.getElementById('dateFrom').value = dates[0];
-  document.getElementById('dateTo').value = dates[dates.length-1];
-}
-
-// ── Apply filters ─────────────────────────────────────────────────────
-function applyFilters() {
-  const selImporters = getSelectedValues(document.getElementById('filterImporter'));
-  const selTransports = getSelectedValues(document.getElementById('filterTransport'));
-  const selCustoms = getSelectedValues(document.getElementById('filterCustoms'));
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
-  const showNonBulk = document.getElementById('toggleNonBulk').checked;
-
-  filteredData = RAW_DATA.filter(r => {
-    if (selImporters.length && !selImporters.includes(r.imp)) return false;
-    if (selTransports.length && !selTransports.includes(r.tm)) return false;
-    if (selCustoms.length && !selCustoms.includes(r.co)) return false;
-    if (dateFrom && r.d < dateFrom) return false;
-    if (dateTo && r.d > dateTo) return false;
-    // Non-bulk Cargolive: exclude unless toggle is on
-    if (!r.b && !showNonBulk) return false;
+/* ── Data helpers ────────────────────────────────────────────────────────── */
+function filterRows() {
+  return DASH.rows.filter(r => {
+    const imp = DASH.importers[r[F.imp]];
+    const loc = DASH.locations[r[F.loc]];
+    const mode = DASH.modes[r[F.mode]];
+    const month = r[F.month];
+    if (state.importers.size && !state.importers.has(imp)) return false;
+    if (!state.modes.has(mode)) return false;
+    if (state.locs.size && !state.locs.has(loc)) return false;
+    if (state.dateFrom && month < state.dateFrom) return false;
+    if (state.dateTo && month > state.dateTo) return false;
     return true;
   });
-
-  updateKPIs();
-  updateChart();
-  updateTable();
-  updateWarningBanner();
-  updateRowBadge();
 }
 
-function updateRowBadge() {
-  document.getElementById('rowCountBadge').textContent = filteredData.length.toLocaleString() + ' rows';
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────────
-function updateKPIs() {
-  const n = filteredData.length;
-  const companies = new Set(filteredData.map(r => r.imp)).size;
-  document.getElementById('kpiTx').textContent = n.toLocaleString();
-  document.getElementById('kpiTxSub').textContent = companies + ' importer' + (companies !== 1 ? 's' : '');
-
-  let totalQ = 0, sumDiff = 0, sumPrice = 0, validD = 0, validP = 0;
-  for (const r of filteredData) {
-    const q = r.q || 0;
-    totalQ += q;
-    if (r.df != null) { sumDiff += r.df * q; validD += q; }
-    if (r.p != null)  { sumPrice += r.p * q; validP += q; }
+function aggregateMonthly(rows) {
+  // returns { importer → { month → {gal,priceQ,plattQ,diffQ} } }
+  const out = {};
+  for (const r of rows) {
+    const imp = DASH.importers[r[F.imp]];
+    const month = r[F.month];
+    const gal = r[F.gal];
+    if (!out[imp]) out[imp] = {};
+    if (!out[imp][month]) out[imp][month] = {gal:0,pq:0,plq:0,dfq:0,n:0};
+    const a = out[imp][month];
+    a.gal += gal; a.pq += r[F.price]*gal; a.plq += r[F.platts]*gal;
+    a.dfq += r[F.df]*gal; a.n += r[F.n];
   }
-
-  document.getElementById('kpiDiff').textContent = validD ? '$' + (sumDiff/validD).toFixed(4) : '—';
-  document.getElementById('kpiPrice').textContent = validP ? '$' + (sumPrice/validP).toFixed(4) : '—';
-  document.getElementById('kpiVol').textContent = fmtNum(totalQ);
+  return out;
 }
 
-// ── Warning banner ────────────────────────────────────────────────────
-function updateWarningBanner() {
-  const nonBulk = filteredData.filter(r => !r.b);
-  const banner = document.getElementById('warnBanner');
-  if (nonBulk.length > 0) {
-    banner.classList.add('visible');
-    document.getElementById('warnText').textContent =
-      `${nonBulk.length} non-bulk Cargolive row${nonBulk.length>1?'s':''} included in view. These are likely non-commercial fuel deliveries (e.g. Formula One). Differentials may not be representative.`;
-  } else {
-    banner.classList.remove('visible');
+function aggregateByImp(rows) {
+  const out = {};
+  for (const r of rows) {
+    const imp = DASH.importers[r[F.imp]];
+    if (!out[imp]) out[imp] = {gal:0,pq:0,plq:0,dfq:0,n:0};
+    const a = out[imp];
+    const gal = r[F.gal];
+    a.gal += gal; a.pq += r[F.price]*gal; a.plq += r[F.platts]*gal;
+    a.dfq += r[F.df]*gal; a.n += r[F.n];
   }
+  return out;
 }
 
-// ── Chart ─────────────────────────────────────────────────────────────
-const METRIC_LABELS = { df: 'Differential (USD/gal)', p: 'Price Paid (USD/gal)', pl: 'Platts (USD/gal)' };
+function totals(rows) {
+  let gal=0,dfq=0,n=0;
+  for (const r of rows) { gal+=r[F.gal]; dfq+=r[F.df]*r[F.gal]; n+=r[F.n]; }
+  return {gal,diff:gal?dfq/gal:0,n};
+}
 
-function buildChartData() {
-  // Group by company → aggKey → weighted avg
-  const companies = [...new Set(filteredData.map(r => r.imp))].sort();
-  const dateMap = {}; // company → { key → {sum, weight} }
+function fmtVol(g) {
+  if (g>=1e9) return (g/1e9).toFixed(2)+'B';
+  if (g>=1e6) return (g/1e6).toFixed(1)+'M';
+  return (g/1e3).toFixed(0)+'K';
+}
 
-  for (const r of filteredData) {
-    if (r[currentMetric] == null) continue;
-    const key = aggKey(r.d, currentAgg);
-    if (!dateMap[r.imp]) dateMap[r.imp] = {};
-    if (!dateMap[r.imp][key]) dateMap[r.imp][key] = { sum: 0, w: 0 };
-    const w = r.q || 1;
-    dateMap[r.imp][key].sum += r[currentMetric] * w;
-    dateMap[r.imp][key].w += w;
+/* ── MAP ─────────────────────────────────────────────────────────────────── */
+// Preprocess map_flows: aggregate by location+mode, use correct coords
+const MAP_FLOWS_RAW = [
+  {location_name:"Veracruz",transport_mode:"MARITIME",total_gal:2430190210,avg_diff:0.3912,transactions:457},
+  {location_name:"Tuxpan",transport_mode:"MARITIME",total_gal:1834834623,avg_diff:0.2585,transactions:534},
+  {location_name:"Nuevo Laredo",transport_mode:"RAIL",total_gal:932248960,avg_diff:0.2267,transactions:9422},
+  {location_name:"Ensenada",transport_mode:"MARITIME",total_gal:803429284,avg_diff:0.4911,transactions:176},
+  {location_name:"Manzanillo",transport_mode:"MARITIME",total_gal:571168707,avg_diff:0.4977,transactions:149},
+  {location_name:"Guaymas",transport_mode:"MARITIME",total_gal:534888481,avg_diff:0.4764,transactions:192},
+  {location_name:"Ciudad Juarez",transport_mode:"PIPELINE",total_gal:507840456,avg_diff:0.3673,transactions:76},
+  {location_name:"Nuevo Laredo",transport_mode:"PIPELINE",total_gal:411337113,avg_diff:0.1982,transactions:407},
+  {location_name:"Topolobampo",transport_mode:"MARITIME",total_gal:370511339,avg_diff:0.3897,transactions:135},
+  {location_name:"Progreso",transport_mode:"MARITIME",total_gal:363744163,avg_diff:0.2352,transactions:218},
+  {location_name:"Coatzacoalcos",transport_mode:"MARITIME",total_gal:346778493,avg_diff:0.2619,transactions:93},
+  {location_name:"Mazatlan",transport_mode:"MARITIME",total_gal:309623964,avg_diff:0.4850,transactions:129},
+  {location_name:"La Paz",transport_mode:"MARITIME",total_gal:285388182,avg_diff:0.6044,transactions:186},
+  {location_name:"Reynosa",transport_mode:"ROAD",total_gal:195465879,avg_diff:0.2792,transactions:1631},
+  {location_name:"Dos Bocas",transport_mode:"MARITIME",total_gal:185837075,avg_diff:0.1827,transactions:70},
+  {location_name:"Piedras Negras",transport_mode:"RAIL",total_gal:127669121,avg_diff:0.2510,transactions:3091},
+  {location_name:"Tampico",transport_mode:"MARITIME",total_gal:124651994,avg_diff:0.5966,transactions:45},
+  {location_name:"Nogales",transport_mode:"ROAD",total_gal:116321581,avg_diff:0.3440,transactions:737},
+  {location_name:"Mexicali",transport_mode:"RAIL",total_gal:106082011,avg_diff:0.3982,transactions:249},
+  {location_name:"Ciudad Juarez",transport_mode:"ROAD",total_gal:144678236,avg_diff:0.3058,transactions:1745},
+  {location_name:"Matamoros",transport_mode:"ROAD",total_gal:44781107,avg_diff:0.2888,transactions:907},
+  {location_name:"Ciudad del Carmen",transport_mode:"MARITIME",total_gal:41327998,avg_diff:0.2125,transactions:19},
+  {location_name:"Lazaro Cardenas",transport_mode:"MARITIME",total_gal:21294082,avg_diff:0.5046,transactions:16},
+  {location_name:"Altamira",transport_mode:"MARITIME",total_gal:12650268,avg_diff:0.2872,transactions:2},
+  {location_name:"Nuevo Laredo",transport_mode:"ROAD",total_gal:11175945,avg_diff:0.4270,transactions:13},
+  {location_name:"Ciudad Camargo",transport_mode:"ROAD",total_gal:4683363,avg_diff:0.1802,transactions:1774},
+  {location_name:"Matamoros",transport_mode:"RAIL",total_gal:3555014,avg_diff:-0.0976,transactions:56},
+  {location_name:"Acapulco",transport_mode:"MARITIME",total_gal:2939790,avg_diff:0.4121,transactions:4},
+  {location_name:"Piedras Negras",transport_mode:"ROAD",total_gal:1898810,avg_diff:0.2204,transactions:44},
+  {location_name:"Tampico",transport_mode:"ROAD",total_gal:98539184,avg_diff:0.2599,transactions:1486},
+];
+
+const MAX_FLOW_VOL = Math.max(...MAP_FLOWS_RAW.map(f=>f.total_gal));
+
+function flowStroke(vol) { return 1 + Math.log10(1 + vol/1e7) * 2.5; }
+
+function routeD(destLon, destLat, mode) {
+  const [ox,oy] = proj(-94,28.5);
+  const [dx,dy] = proj(destLon,destLat);
+  if (mode==='MARITIME') {
+    if (destLon < -100) {
+      // Pacific route: arc around SE Mexico / through Caribbean
+      const [c1x,c1y] = proj(-84,16);
+      const [c2x,c2y] = proj(destLon+7, 12);
+      return `M${f(ox)},${f(oy)} C${f(c1x)},${f(c1y)} ${f(c2x)},${f(c2y)} ${f(dx)},${f(dy)}`;
+    }
+    // Gulf route: arc through Gulf waters
+    const cpx = (ox+dx)/2 + 20;
+    const cpy = Math.min(oy,dy) - 35;
+    return `M${f(ox)},${f(oy)} Q${f(cpx)},${f(cpy)} ${f(dx)},${f(dy)}`;
   }
+  // Land routes: curve through Texas/US then to border
+  const cpx = (ox+dx)/2;
+  const cpy = Math.min(oy,dy) - 60;
+  return `M${f(ox)},${f(oy)} Q${f(cpx)},${f(cpy)} ${f(dx)},${f(dy)}`;
+}
 
-  const allKeys = [...new Set(Object.values(dateMap).flatMap(d => Object.keys(d)))].sort();
+function initMap() {
+  const svg = document.getElementById('map');
+  const NS = 'http://www.w3.org/2000/svg';
+  const xl = 'http://www.w3.org/1999/xlink';
 
-  const datasets = companies
-    .filter(c => dateMap[c] && Object.keys(dateMap[c]).length > 0)
-    .map((c, i) => {
-      const color = PALETTE[i % PALETTE.length];
-      return {
-        label: shortName(c),
-        fullLabel: c,
-        data: allKeys.map(k => {
-          const entry = dateMap[c]?.[k];
-          return entry ? { x: k, y: +(entry.sum / entry.w).toFixed(4) } : null;
-        }).filter(p => p !== null),
-        borderColor: color,
-        backgroundColor: color + '22',
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        borderWidth: 2,
-        tension: 0.3,
-        spanGaps: false,
-        hidden: hiddenCompanies.has(c),
-      };
+  // Background ocean
+  const ocean = document.createElementNS(NS,'rect');
+  ocean.setAttribute('width',MAP_W); ocean.setAttribute('height',MAP_H);
+  ocean.setAttribute('fill','#060c1a'); svg.appendChild(ocean);
+
+  // Gulf of Mexico label
+  const gulfLbl = document.createElementNS(NS,'text');
+  gulfLbl.setAttribute('x',560); gulfLbl.setAttribute('y',115);
+  gulfLbl.setAttribute('fill','#1a3a5c'); gulfLbl.setAttribute('font-size',9);
+  gulfLbl.setAttribute('font-style','italic'); gulfLbl.setAttribute('text-anchor','middle');
+  gulfLbl.textContent='Gulf of Mexico'; svg.appendChild(gulfLbl);
+
+  const pacLbl = document.createElementNS(NS,'text');
+  pacLbl.setAttribute('x',170); pacLbl.setAttribute('y',380);
+  pacLbl.setAttribute('fill','#1a3a5c'); pacLbl.setAttribute('font-size',9);
+  pacLbl.setAttribute('font-style','italic'); pacLbl.setAttribute('text-anchor','middle');
+  pacLbl.textContent='Pacific Ocean'; svg.appendChild(pacLbl);
+
+  // Mexico land
+  const mainland = document.createElementNS(NS,'polygon');
+  mainland.setAttribute('points', polyPoints(MAINLAND));
+  mainland.setAttribute('fill','#1a2744'); mainland.setAttribute('stroke','#2a3f6a'); mainland.setAttribute('stroke-width','0.8');
+  svg.appendChild(mainland);
+
+  const baja = document.createElementNS(NS,'polygon');
+  baja.setAttribute('points', polyPoints(BAJA));
+  baja.setAttribute('fill','#1a2744'); baja.setAttribute('stroke','#2a3f6a'); baja.setAttribute('stroke-width','0.8');
+  svg.appendChild(baja);
+
+  // Defs for vehicle path references
+  const defs = document.createElementNS(NS,'defs');
+  svg.appendChild(defs);
+
+  // Route paths group (behind dots)
+  const routeG = document.createElementNS(NS,'g'); routeG.id='routeGroup'; svg.appendChild(routeG);
+
+  // City dots group (in front)
+  const dotG = document.createElementNS(NS,'g'); dotG.id='dotGroup'; svg.appendChild(dotG);
+
+  // USGC origin (pulsing)
+  const [ox,oy] = proj(-94,28.5);
+  const usgcG = document.createElementNS(NS,'g');
+  for (let i=0;i<3;i++) {
+    const pulse = document.createElementNS(NS,'circle');
+    pulse.setAttribute('cx',f(ox)); pulse.setAttribute('cy',f(oy)); pulse.setAttribute('r',6+i*4);
+    pulse.setAttribute('fill','none'); pulse.setAttribute('stroke','rgba(56,189,248,0.5)'); pulse.setAttribute('stroke-width','1');
+    pulse.setAttribute('opacity','0');
+    const anim = document.createElementNS(NS,'animate');
+    anim.setAttribute('attributeName','opacity'); anim.setAttribute('values','0;0.7;0');
+    anim.setAttribute('dur','2s'); anim.setAttribute('begin',`${i*0.65}s`); anim.setAttribute('repeatCount','indefinite');
+    pulse.appendChild(anim);
+    usgcG.appendChild(pulse);
+  }
+  const oc = document.createElementNS(NS,'circle');
+  oc.setAttribute('cx',f(ox)); oc.setAttribute('cy',f(oy)); oc.setAttribute('r',4);
+  oc.setAttribute('fill','#38bdf8'); usgcG.appendChild(oc);
+  const olbl = document.createElementNS(NS,'text');
+  olbl.setAttribute('x',f(ox)+8); olbl.setAttribute('y',f(oy)+3);
+  olbl.setAttribute('fill','#38bdf8'); olbl.setAttribute('font-size',8); olbl.setAttribute('font-weight','700');
+  olbl.textContent='USGC'; usgcG.appendChild(olbl);
+  svg.appendChild(usgcG);
+
+  drawFlows();
+  drawCities();
+}
+
+function drawFlows() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const defs = document.querySelector('#map defs');
+  const routeG = document.getElementById('routeGroup');
+  routeG.innerHTML = ''; defs.innerHTML='';
+
+  // Determine which flows are active (based on mode filter and location filter)
+  const activeModes = state.modes;
+  const activeLocs = state.locs;
+
+  MAP_FLOWS_RAW.forEach((flow,i) => {
+    const locCoords = CITY_COORDS[flow.location_name];
+    if (!locCoords) return;
+    const [lat,lon] = locCoords;
+    const mode = flow.transport_mode;
+    const color = MODE_COLOR[mode];
+    const stroke = flowStroke(flow.total_gal);
+    const d = routeD(lon, lat, mode);
+    const pathId = `rp-${i}`;
+
+    const isLocActive = activeLocs.size === 0 || activeLocs.has(flow.location_name);
+    const isModeActive = activeModes.has(mode);
+    const alpha = (!isModeActive || !isLocActive) ? 0.08 : 0.35;
+
+    // Define path in defs for animateMotion
+    const defPath = document.createElementNS(NS,'path');
+    defPath.id = pathId; defPath.setAttribute('d',d); defPath.setAttribute('fill','none');
+    defs.appendChild(defPath);
+
+    // Visible route stroke
+    const pathEl = document.createElementNS(NS,'path');
+    pathEl.setAttribute('d',d); pathEl.setAttribute('fill','none');
+    pathEl.setAttribute('stroke',color); pathEl.setAttribute('stroke-width',f(stroke));
+    pathEl.setAttribute('stroke-linecap','round');
+    pathEl.setAttribute('opacity',alpha);
+    if (mode==='PIPELINE') {
+      pathEl.setAttribute('stroke-dasharray','8 6');
+      const anim = document.createElementNS(NS,'animate');
+      anim.setAttribute('attributeName','stroke-dashoffset');
+      anim.setAttribute('from','0'); anim.setAttribute('to','-28');
+      anim.setAttribute('dur','1.2s'); anim.setAttribute('repeatCount','indefinite');
+      if (isModeActive && isLocActive) pathEl.appendChild(anim);
+    }
+    routeG.appendChild(pathEl);
+
+    if (!isModeActive || !isLocActive) return;
+
+    // Animated vehicle
+    if (mode!=='PIPELINE') {
+      const vehicleEmoji = {MARITIME:'🚢',RAIL:'🚂',ROAD:'🚛'}[mode];
+      const dur = mode==='MARITIME' ? (lon<-100?'10s':'7s') : '5s';
+      const numVehicles = flow.total_gal > 5e8 ? 2 : 1;
+      for (let v=0;v<numVehicles;v++) {
+        const txt = document.createElementNS(NS,'text');
+        txt.setAttribute('font-size','11'); txt.setAttribute('text-anchor','middle');
+        txt.setAttribute('dominant-baseline','middle');
+        txt.setAttribute('opacity','0.85');
+        txt.textContent = vehicleEmoji;
+        const am = document.createElementNS(NS,'animateMotion');
+        am.setAttribute('dur',dur); am.setAttribute('repeatCount','indefinite');
+        am.setAttribute('rotate','auto'); am.setAttribute('begin',`${v*(parseFloat(dur)/numVehicles)}s`);
+        const mp = document.createElementNS(NS,'mpath');
+        mp.setAttributeNS('http://www.w3.org/1999/xlink','href',`#${pathId}`);
+        am.appendChild(mp); txt.appendChild(am);
+        routeG.appendChild(txt);
+      }
+    }
+  });
+}
+
+function drawCities() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const dotG = document.getElementById('dotGroup');
+  dotG.innerHTML='';
+  const tooltip = document.getElementById('mapTooltip');
+
+  // Aggregate volumes per location (all modes)
+  const locVols = {};
+  MAP_FLOWS_RAW.forEach(f=>{
+    if (!locVols[f.location_name]) locVols[f.location_name]={gal:0,diffs:[]};
+    locVols[f.location_name].gal += f.total_gal;
+    locVols[f.location_name].diffs.push({mode:f.transport_mode,avg_diff:f.avg_diff,gal:f.total_gal});
+  });
+
+  const maxLocVol = Math.max(...Object.values(locVols).map(v=>v.gal));
+
+  Object.entries(CITY_COORDS).forEach(([name,[lat,lon]])=>{
+    const locData = locVols[name];
+    if (!locData) return;
+    const [x,y] = proj(lon,lat);
+    const r = 3 + Math.log10(1+locData.gal/1e6)*2.5;
+    const isSelected = state.locs.has(name);
+    const isModeFiltered = state.modes.size < 4;
+
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('cursor','pointer');
+    g.setAttribute('class','city-dot');
+    g.dataset.loc=name;
+
+    // Outer ring for selected state
+    if (isSelected) {
+      const ring = document.createElementNS(NS,'circle');
+      ring.setAttribute('cx',f(x)); ring.setAttribute('cy',f(y)); ring.setAttribute('r',f(r+3));
+      ring.setAttribute('fill','none'); ring.setAttribute('stroke','white'); ring.setAttribute('stroke-width','1.5');
+      ring.setAttribute('opacity','0.7'); g.appendChild(ring);
+    }
+
+    const dot = document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',f(x)); dot.setAttribute('cy',f(y)); dot.setAttribute('r',f(r));
+    const locActive = state.locs.size===0 || isSelected;
+    dot.setAttribute('fill', isSelected ? 'white' : 'rgba(255,255,255,0.7)');
+    dot.setAttribute('stroke','rgba(255,255,255,0.2)'); dot.setAttribute('stroke-width','0.5');
+    dot.setAttribute('opacity', locActive ? '1' : '0.2');
+    g.appendChild(dot);
+
+    // City label
+    const lbl = document.createElementNS(NS,'text');
+    lbl.setAttribute('x',f(x+r+3)); lbl.setAttribute('y',f(y+3));
+    lbl.setAttribute('fill',isSelected?'white':'rgba(200,210,230,0.7)');
+    lbl.setAttribute('font-size', locData.gal>5e8?'8':'7');
+    lbl.setAttribute('font-weight', locData.gal>1e9?'700':'400');
+    lbl.textContent=name; lbl.setAttribute('pointer-events','none');
+    lbl.setAttribute('opacity', locActive?'1':'0.2');
+    g.appendChild(lbl);
+
+    // Click handler
+    g.addEventListener('click', () => toggleLocation(name));
+
+    // Hover tooltip
+    g.addEventListener('mouseenter', (e)=>{
+      const rect = document.getElementById('mapContainer').getBoundingClientRect();
+      tooltip.style.display='block';
+      tooltip.style.left=(e.clientX-rect.left+12)+'px';
+      tooltip.style.top=(e.clientY-rect.top-10)+'px';
+      let html=`<div class="t-name">${name}</div>`;
+      html+=`<div class="t-row">Total Volume: <span>${fmtVol(locData.gal)} gal</span></div>`;
+      locData.diffs.forEach(d=>{
+        html+=`<div class="t-row">${d.mode}: <span>$${d.avg_diff.toFixed(4)}/gal diff</span></div>`;
+      });
+      tooltip.innerHTML=html;
     });
+    g.addEventListener('mousemove',(e)=>{
+      const rect=document.getElementById('mapContainer').getBoundingClientRect();
+      tooltip.style.left=(e.clientX-rect.left+12)+'px';
+      tooltip.style.top=(e.clientY-rect.top-10)+'px';
+    });
+    g.addEventListener('mouseleave',()=>{ tooltip.style.display='none'; });
 
-  return datasets;
+    dotG.appendChild(g);
+  });
 }
 
-function updateChart() {
-  const datasets = buildChartData();
-  document.getElementById('chartTitle').textContent = METRIC_LABELS[currentMetric] + ' over Time';
+function toggleLocation(name) {
+  if (state.locs.has(name)) state.locs.delete(name);
+  else state.locs.add(name);
+  updateAll();
+}
 
-  if (chart) {
-    chart.data.datasets = datasets;
-    chart.update('none');
+/* ── CHART ───────────────────────────────────────────────────────────────── */
+let chartInst = null;
+let chartDataCache = {};
+
+function buildChartDatasets(monthly) {
+  const imps = Object.keys(monthly);
+  const allMonths = [...new Set(imps.flatMap(imp=>Object.keys(monthly[imp])))].sort();
+  chartDataCache = monthly;
+
+  return imps.map((imp,i) => {
+    const color = COMPANY_COLORS[imp] || '#94a3b8';
+    const data = allMonths.map(m => {
+      const a = monthly[imp]?.[m];
+      if (!a || !a.gal) return null;
+      const val = state.metric==='df' ? a.dfq/a.gal : state.metric==='price' ? a.pq/a.gal : a.plq/a.gal;
+      return { x: m+'-01', y: +val.toFixed(4) };
+    }).filter(p=>p!==null);
+    return {
+      label: imp, imp,
+      data,
+      borderColor: color, backgroundColor: color+'22',
+      pointRadius:3, pointHoverRadius:5,
+      borderWidth: 2, tension: 0.25, spanGaps:false,
+      hidden: state.hiddenCompanies.has(imp),
+    };
+  });
+}
+
+function renderChart(rows) {
+  const monthly = aggregateMonthly(rows);
+  const datasets = buildChartDatasets(monthly);
+  document.getElementById('chartTitle').textContent = METRIC_LABELS[state.metric];
+
+  if (chartInst) {
+    chartInst.data.datasets = datasets;
+    chartInst.update('none');
   } else {
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    chart = new Chart(ctx, {
-      type: 'line',
-      data: { datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'nearest', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1a1d27',
-            borderColor: '#2a2d3e',
-            borderWidth: 1,
-            titleColor: '#e8eaf0',
-            bodyColor: '#7a7f96',
-            padding: 10,
-            callbacks: {
-              label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(4)}/gal`
+    const ctx = document.getElementById('chartCanvas').getContext('2d');
+    chartInst = new Chart(ctx, {
+      type:'line',
+      data:{ datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'nearest', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            backgroundColor:'rgba(13,21,38,0.97)',
+            borderColor:'#1e2d4a', borderWidth:1,
+            titleColor:'#e2e8f0', bodyColor:'#94a3b8',
+            padding:10,
+            callbacks:{
+              title: ctx => {
+                const d = ctx[0];
+                const date = new Date(d.raw.x);
+                return `${d.dataset.label} — ${date.toLocaleDateString('en-US',{month:'long',year:'numeric'})}`;
+              },
+              label: ctx => {
+                const imp = ctx.dataset.imp;
+                const month = ctx.raw.x.slice(0,7);
+                const a = chartDataCache[imp]?.[month];
+                if (!a || !a.gal) return '';
+                return [
+                  `  Differential:  $${(a.dfq/a.gal).toFixed(4)}/gal`,
+                  `  Price Paid:     $${(a.pq/a.gal).toFixed(4)}/gal`,
+                  `  Platts:         $${(a.plq/a.gal).toFixed(4)}/gal`,
+                  `  Volume:         ${fmtVol(a.gal)} gal`,
+                  `  Transactions:   ${a.n.toLocaleString()}`,
+                ];
+              }
             }
           }
         },
-        scales: {
-          x: {
-            type: 'time',
-            time: { unit: currentAgg === 'week' ? 'week' : 'month', tooltipFormat: 'MMM d, yyyy' },
-            grid: { color: 'rgba(42,45,62,0.5)' },
-            ticks: { color: '#7a7f96', maxTicksLimit: 12 }
+        scales:{
+          x:{
+            type:'time',
+            time:{ unit:'month', displayFormats:{ month:"MMM 'yy" }, tooltipFormat:'MMM yyyy' },
+            grid:{ color:'rgba(30,45,74,0.8)' },
+            ticks:{ color:'#64748b', maxTicksLimit:14, font:{size:10} }
           },
-          y: {
-            grid: { color: 'rgba(42,45,62,0.5)' },
-            ticks: {
-              color: '#7a7f96',
-              callback: v => '$' + v.toFixed(2)
+          y:{
+            grid:{ color:'rgba(30,45,74,0.8)' },
+            ticks:{ color:'#64748b', callback:v=>'$'+v.toFixed(2), font:{size:10} },
+            afterDataLimits: scale => {
+              if (state.metric==='df') {
+                // Draw zero line emphasis
+                scale.min = Math.min(scale.min, -0.05);
+              }
             }
           }
         }
@@ -732,131 +769,186 @@ function updateChart() {
     });
   }
 
-  buildLegend(datasets);
+  renderLegend(datasets);
 }
 
-function buildLegend(datasets) {
-  const legend = document.getElementById('chartLegend');
-  legend.innerHTML = '';
-  datasets.forEach((ds, i) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item' + (ds.hidden ? ' muted' : '');
-    item.innerHTML = `<div class="legend-dot" style="background:${ds.borderColor}"></div><span>${ds.label}</span>`;
-    item.onclick = () => toggleCompany(ds.fullLabel, item, i);
-    legend.appendChild(item);
+function renderLegend(datasets) {
+  const leg = document.getElementById('chartLegend');
+  leg.innerHTML='';
+  datasets.forEach((ds,i)=>{
+    const el = document.createElement('div');
+    el.className='leg-item'+(state.hiddenCompanies.has(ds.label)?' hidden':'');
+    el.innerHTML=`<div class="leg-dot" style="background:${ds.borderColor}"></div><span>${ds.label}</span>`;
+    el.onclick=()=>{
+      if(state.hiddenCompanies.has(ds.label)) state.hiddenCompanies.delete(ds.label);
+      else state.hiddenCompanies.add(ds.label);
+      if(chartInst && chartInst.data.datasets[i]) {
+        chartInst.data.datasets[i].hidden=state.hiddenCompanies.has(ds.label);
+        chartInst.update();
+      }
+      el.classList.toggle('hidden');
+    };
+    leg.appendChild(el);
   });
 }
 
-function toggleCompany(fullLabel, el, dsIdx) {
-  if (hiddenCompanies.has(fullLabel)) {
-    hiddenCompanies.delete(fullLabel);
-    el.classList.remove('muted');
-  } else {
-    hiddenCompanies.add(fullLabel);
-    el.classList.add('muted');
-  }
-  if (chart && chart.data.datasets[dsIdx]) {
-    chart.data.datasets[dsIdx].hidden = hiddenCompanies.has(fullLabel);
-    chart.update();
-  }
-}
+/* ── CARDS ───────────────────────────────────────────────────────────────── */
+function renderCards(rows) {
+  const byImp = aggregateByImp(rows);
+  const grid = document.getElementById('cardsGrid');
+  const entries = Object.entries(byImp)
+    .filter(([,a])=>a.gal>0)
+    .sort((a,b)=>(a[1].dfq/a[1].gal)-(b[1].dfq/b[1].gal));
 
-// ── Table ─────────────────────────────────────────────────────────────
-const TABLE_PAGE = 500;
+  document.getElementById('cardsSubtitle').textContent =
+    entries.length ? `${entries.length} importers` : '';
 
-function updateTable() {
-  const sorted = [...filteredData].sort((a, b) => {
-    let av = a[sortField], bv = b[sortField];
-    if (av == null) av = sortDir > 0 ? Infinity : -Infinity;
-    if (bv == null) bv = sortDir > 0 ? Infinity : -Infinity;
-    if (typeof av === 'string') return av.localeCompare(bv) * sortDir;
-    return (av - bv) * sortDir;
-  });
-
-  const tbody = document.getElementById('tableBody');
-  const noData = document.getElementById('noData');
-  document.getElementById('tableCount').textContent = sorted.length.toLocaleString() + ' rows' + (sorted.length > TABLE_PAGE ? ` (showing first ${TABLE_PAGE})` : '');
-
-  if (sorted.length === 0) {
-    tbody.innerHTML = '';
-    noData.style.display = 'block';
+  if (!entries.length) {
+    grid.innerHTML='<div class="no-data-msg">No data matches current filters</div>';
     return;
   }
-  noData.style.display = 'none';
 
-  const rows = sorted.slice(0, TABLE_PAGE);
-  tbody.innerHTML = rows.map(r => {
-    const diffClass = r.df != null ? (r.df >= 0 ? 'pos' : 'neg') : '';
-    const modeColors = { ROAD: '#4f8ef7', MARITIME: '#27ae60', PIPELINE: '#9b59b6', RAIL: '#f5a623' };
-    const mc = modeColors[r.tm] || '#7a7f96';
-    const rowClass = r.b ? '' : 'non-bulk';
-    return `<tr class="${rowClass}">
-      <td>${r.d}</td>
-      <td title="${r.imp}">${shortName(r.imp)}</td>
-      <td>${r.co}</td>
-      <td><span class="tag" style="background:${mc}22;color:${mc}">${r.tm}</span></td>
-      <td class="num ${diffClass}">${r.df != null ? '$' + fmt(r.df) : '—'}</td>
-      <td class="num">${r.p != null ? '$' + fmt(r.p) : '—'}</td>
-      <td class="num">${r.pl != null ? '$' + fmt(r.pl) : '—'}</td>
-      <td class="num">${r.q != null ? r.q.toLocaleString() : '—'}</td>
-      <td style="color:${r.b ? 'var(--green)' : 'var(--warn)'}">${r.b ? '✓' : '⚠'}</td>
-    </tr>`;
+  grid.innerHTML = entries.map(([imp,a],i)=>{
+    const color = COMPANY_COLORS[imp]||'#94a3b8';
+    const diff = a.dfq/a.gal, price = a.pq/a.gal, platts = a.plq/a.gal;
+    const diffColor = diff<0.15?'#34d399':diff<0.30?'#60a5fa':diff<0.50?'#f59e0b':'#f87171';
+    return `
+    <div class="kpi-card" style="border-left-color:${color}">
+      <div class="kpi-rank">#${i+1}</div>
+      <div class="kpi-name">${imp}</div>
+      <div class="kpi-diff" style="color:${color}">$${diff.toFixed(4)}</div>
+      <div class="kpi-diff-label">avg diff / gal</div>
+      <div class="kpi-metrics">
+        <div class="kpi-m">
+          <div class="kpi-m-val">${fmtVol(a.gal)}</div>
+          <div class="kpi-m-label">Total Volume</div>
+        </div>
+        <div class="kpi-m">
+          <div class="kpi-m-val">$${price.toFixed(4)}</div>
+          <div class="kpi-m-label">Avg Price/gal</div>
+        </div>
+        <div class="kpi-m">
+          <div class="kpi-m-val">$${platts.toFixed(4)}</div>
+          <div class="kpi-m-label">Platts</div>
+        </div>
+        <div class="kpi-m">
+          <div class="kpi-m-val">${a.n.toLocaleString()}</div>
+          <div class="kpi-m-label">Transactions</div>
+        </div>
+      </div>
+      <div class="kpi-bar" style="background:${color};width:${Math.min(100,diff/0.6*100)}%"></div>
+    </div>`;
   }).join('');
+}
 
-  // Update sort icons
-  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
-  const activeTh = document.getElementById('th-' + sortField);
-  if (activeTh) {
-    activeTh.classList.add('sorted');
-    activeTh.querySelector('.sort-icon').textContent = sortDir > 0 ? '↑' : '↓';
+/* ── Header stats ────────────────────────────────────────────────────────── */
+function updateHeader(rows) {
+  const t = totals(rows);
+  document.getElementById('hdrTx').textContent = t.n.toLocaleString();
+  document.getElementById('hdrVol').textContent = fmtVol(t.gal)+' gal';
+  document.getElementById('hdrDiff').textContent = t.gal ? '$'+t.diff.toFixed(4)+'/gal' : '—';
+}
+
+/* ── Selected locations chips ────────────────────────────────────────────── */
+function updateLocChips() {
+  const el = document.getElementById('selLocList');
+  if (!state.locs.size) {
+    el.innerHTML='<span style="font-size:10px;color:var(--muted)">Click map dots to filter</span>';
+    return;
   }
+  el.innerHTML=[...state.locs].map(loc=>
+    `<div class="loc-chip" onclick="toggleLocation('${loc}')">${loc} ×</div>`
+  ).join('');
 }
 
-function sortTable(field) {
-  if (sortField === field) { sortDir *= -1; }
-  else { sortField = field; sortDir = -1; }
-  updateTable();
+/* ── Update everything ───────────────────────────────────────────────────── */
+function updateAll() {
+  const rows = filterRows();
+  updateHeader(rows);
+  renderChart(rows);
+  renderCards(rows);
+  drawFlows();
+  drawCities();
+  updateLocChips();
 }
 
-// ── Controls ──────────────────────────────────────────────────────────
-function setMetric(btn, metric, label) {
-  currentMetric = metric;
-  document.querySelectorAll('.metric-toggle button').forEach(b => b.classList.remove('active'));
+/* ── Metric + filter controls ────────────────────────────────────────────── */
+function setMetric(m, btn) {
+  state.metric = m;
+  document.querySelectorAll('.tog-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  updateChart();
+  if (chartInst) chartInst.destroy(); chartInst=null;
+  updateAll();
 }
 
-function setAgg(btn, agg) {
-  currentAgg = agg;
-  document.querySelectorAll('.agg-toggle button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (chart) {
-    chart.options.scales.x.time.unit = agg === 'week' ? 'week' : 'month';
-  }
-  updateChart();
+/* ── Sidebar filter population ───────────────────────────────────────────── */
+function populateFilters() {
+  const impSel = document.getElementById('fImporter');
+  DASH.importers.forEach(imp=>{
+    const o = document.createElement('option');
+    o.value=imp; o.textContent=imp;
+    if (DEFAULT_COMPANIES.includes(imp)) o.selected=true;
+    impSel.appendChild(o);
+  });
+
+  const modeSel = document.getElementById('fMode');
+  DASH.modes.forEach(m=>{
+    const o = document.createElement('option');
+    o.value=m; o.textContent=m; o.selected=true;
+    modeSel.appendChild(o);
+  });
+
+  const months = DASH.rows.map(r=>r[F.month]).sort();
+  document.getElementById('fDateFrom').value = months[0];
+  document.getElementById('fDateTo').value = months[months.length-1];
+  state.dateFrom = months[0];
+  state.dateTo = months[months.length-1];
 }
 
-function resetFilters() {
-  document.getElementById('filterImporter').selectedIndex = -1;
-  document.getElementById('filterTransport').selectedIndex = -1;
-  document.getElementById('filterCustoms').selectedIndex = -1;
-  const dates = RAW_DATA.map(r => r.d).sort();
-  document.getElementById('dateFrom').value = dates[0];
-  document.getElementById('dateTo').value = dates[dates.length-1];
-  document.getElementById('toggleNonBulk').checked = false;
-  hiddenCompanies.clear();
-  applyFilters();
+function readFilters() {
+  const impSel = document.getElementById('fImporter');
+  const selImps = Array.from(impSel.selectedOptions).map(o=>o.value);
+  state.importers = new Set(selImps);
+
+  const modeSel = document.getElementById('fMode');
+  const selModes = Array.from(modeSel.selectedOptions).map(o=>o.value);
+  state.modes = new Set(selModes);
+
+  state.dateFrom = document.getElementById('fDateFrom').value;
+  state.dateTo = document.getElementById('fDateTo').value;
 }
 
-// ── Event listeners ───────────────────────────────────────────────────
-['filterImporter','filterTransport','filterCustoms','dateFrom','dateTo'].forEach(id => {
-  document.getElementById(id).addEventListener('change', applyFilters);
+function resetAll() {
+  // Reset selects
+  const impSel=document.getElementById('fImporter');
+  Array.from(impSel.options).forEach(o=>o.selected=DEFAULT_COMPANIES.includes(o.value));
+  const modeSel=document.getElementById('fMode');
+  Array.from(modeSel.options).forEach(o=>o.selected=true);
+  const months=DASH.rows.map(r=>r[F.month]).sort();
+  document.getElementById('fDateFrom').value=months[0];
+  document.getElementById('fDateTo').value=months[months.length-1];
+
+  state.importers=new Set(DEFAULT_COMPANIES);
+  state.modes=new Set(['MARITIME','RAIL','ROAD','PIPELINE']);
+  state.locs.clear();
+  state.dateFrom=months[0]; state.dateTo=months[months.length-1];
+  state.hiddenCompanies.clear();
+  if (chartInst) { chartInst.destroy(); chartInst=null; }
+  updateAll();
+}
+
+/* ── Event listeners ─────────────────────────────────────────────────────── */
+['fImporter','fMode'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{ readFilters(); updateAll(); });
 });
-document.getElementById('toggleNonBulk').addEventListener('change', applyFilters);
+['fDateFrom','fDateTo'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{ readFilters(); updateAll(); });
+});
 
-// ── Init ──────────────────────────────────────────────────────────────
+/* ── Init ────────────────────────────────────────────────────────────────── */
 populateFilters();
-applyFilters();
+initMap();
+updateAll();
 </script>
 </body>
 </html>
