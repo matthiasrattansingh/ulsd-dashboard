@@ -439,9 +439,11 @@ let sortField = 'd', sortDir = -1;
 let chart = null, expChart = null;
 let hiddenCompanies = new Set();
 let filteredData = [];
+// currentExpSorted holds the live sorted exporter list for the bar chart click handler
+let currentExpSorted = [];
 
-// Dropdown state: maps dd-id → Set of selected values
-const ddSelected = { imp: new Set(), mode: new Set(), co: new Set(), exp: new Set() };
+// Dropdown state: null = no filter (show all), Set = filter to those values (empty Set = show nothing)
+const ddSelected = { imp: null, mode: null, co: null, exp: null };
 // All unique values for each dimension
 const ddAll = { imp: [], mode: [], co: [], exp: [] };
 
@@ -470,7 +472,7 @@ function buildDdList(id, items, selectedSet) {
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.value = val;
-    cb.checked = selectedSet.size === 0 || selectedSet.has(val);
+    cb.checked = selectedSet === null || selectedSet.has(val);
     cb.addEventListener('change', () => { syncDdState(id); applyFilters(); });
     label.appendChild(cb);
     const txt = document.createElement('span');
@@ -495,9 +497,9 @@ function syncDdState(id) {
   const all = [...list.querySelectorAll('input[type=checkbox]')];
   const checked = all.filter(cb => cb.checked);
   if (checked.length === all.length) {
-    ddSelected[id].clear();
+    ddSelected[id] = null; // null = no filter = show all
   } else {
-    ddSelected[id] = new Set(checked.map(cb => cb.value));
+    ddSelected[id] = new Set(checked.map(cb => cb.value)); // empty Set = show nothing
   }
   updateDdLabel(id);
 }
@@ -520,7 +522,7 @@ function updateDdLabel(id) {
 function ddSelectAll(id) {
   const list = document.getElementById(`ddList-${id}`);
   list.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
-  ddSelected[id].clear();
+  ddSelected[id] = null; // null = no filter = show all
   updateDdLabel(id);
   applyFilters();
 }
@@ -528,10 +530,7 @@ function ddSelectAll(id) {
 function ddSelectNone(id) {
   const list = document.getElementById(`ddList-${id}`);
   list.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
-  const items = ddAll[id];
-  ddSelected[id] = new Set(items); // all selected = none shown (empty result)
-  // Actually set to empty set to mean "none selected" = show nothing
-  ddSelected[id] = new Set(['__NONE__']);
+  ddSelected[id] = new Set(); // empty Set = filter to nothing = show nothing
   updateDdLabel(id);
   applyFilters();
 }
@@ -564,10 +563,10 @@ function applyFilters() {
   const selExp  = ddSelected.exp;
 
   filteredData = RAW_DATA.filter(r => {
-    if (selImp.size  && !selImp.has(r.imp))          return false;
-    if (selMode.size && !selMode.has(r.tm))           return false;
-    if (selCo.size   && !selCo.has(r.co))             return false;
-    if (selExp.size  && !selExp.has(r.exp || 'N/A'))  return false;
+    if (selImp  !== null && !selImp.has(r.imp))          return false;
+    if (selMode !== null && !selMode.has(r.tm))           return false;
+    if (selCo   !== null && !selCo.has(r.co))             return false;
+    if (selExp  !== null && !selExp.has(r.exp || 'N/A'))  return false;
     if (dateFrom && r.d < dateFrom)                   return false;
     if (dateTo   && r.d > dateTo)                     return false;
     if (!r.b && !showNonBulk)                         return false;
@@ -761,9 +760,10 @@ function updateExporterChart() {
     expAgg[exp].tx  += 1;
   }
 
-  const sorted = Object.entries(expAgg)
+  currentExpSorted = Object.entries(expAgg)
     .sort((a,b) => b[1][currentExpMetric] - a[1][currentExpMetric])
     .slice(0, 20);
+  const sorted = currentExpSorted;
 
   const labels = sorted.map(([k]) => expShort(k));
   const values = sorted.map(([,v]) => currentExpMetric === 'gal' ? +(v.gal/1e6).toFixed(2) : v.tx);
@@ -826,23 +826,22 @@ function updateExporterChart() {
         },
         onClick: (_, elements) => {
           if (!elements.length) return;
-          const expName = sorted[elements[0].index][0];
-          // Toggle exporter in filter
+          const entry = currentExpSorted[elements[0].index];
+          if (!entry) return;
+          const expName = entry[0];
           const list = document.getElementById('ddList-exp');
-          const cb = [...list.querySelectorAll('input')].find(cb => cb.value === expName);
-          if (cb) {
-            // If all selected, switch to just this one
-            const allCbs = [...list.querySelectorAll('input')];
-            const allChecked = allCbs.every(c => c.checked);
-            if (allChecked) {
-              allCbs.forEach(c => c.checked = false);
-              cb.checked = true;
-            } else {
-              cb.checked = !cb.checked;
-            }
-            syncDdState('exp');
-            applyFilters();
+          const allCbs = [...list.querySelectorAll('input')];
+          const cb = allCbs.find(c => c.value === expName);
+          if (!cb) return;
+          const allChecked = allCbs.every(c => c.checked);
+          if (allChecked) {
+            allCbs.forEach(c => c.checked = false);
+            cb.checked = true;
+          } else {
+            cb.checked = !cb.checked;
           }
+          syncDdState('exp');
+          applyFilters();
         }
       }
     });
@@ -938,7 +937,7 @@ function setExpMetric(m, btn) {
 // ── Reset ─────────────────────────────────────────────────────────────────────
 function resetFilters() {
   ['imp','mode','co','exp'].forEach(id => {
-    ddSelected[id].clear();
+    ddSelected[id] = null;
     buildDdList(id, ddAll[id], ddSelected[id]);
   });
   const dates = RAW_DATA.map(r => r.d).sort();
