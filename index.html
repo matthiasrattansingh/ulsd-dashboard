@@ -6,327 +6,162 @@
 <title>ULSD Import Dashboard — Mexico</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="ulsd_data.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#1e2130;--border:#2a2d3e;
+  --accent:#4f8ef7;--warn:#f5a623;--danger:#e74c3c;--text:#e8eaf0;
+  --muted:#7a7f96;--green:#27ae60;--font:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
 
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --border: #2a2d3e;
-    --accent: #4f8ef7;
-    --warn: #f5a623;
-    --danger: #e74c3c;
-    --text: #e8eaf0;
-    --muted: #7a7f96;
-    --green: #27ae60;
-    --font: 'Inter', system-ui, -apple-system, sans-serif;
-  }
+/* ── HEADER ── */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;
+  display:flex;align-items:center;gap:14px}
+header h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+header .subtitle{color:var(--muted);font-size:11px}
+.hbadge{margin-left:auto;background:#1a3060;color:var(--accent);border:1px solid var(--accent);
+  border-radius:4px;padding:3px 9px;font-size:10px;font-weight:700;letter-spacing:.5px}
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 57px)}
 
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
-  header .subtitle { color: var(--muted); font-size: 13px; }
-  header .badge {
-    margin-left: auto;
-    background: #1e3a5f;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
+/* ── SIDEBAR ── */
+aside{background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;
+  overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.fg-label{display:block;font-size:10px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 
-  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 57px); }
+/* Checkbox dropdown */
+.dd-wrap{position:relative}
+.dd-btn{width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);padding:7px 10px;font-size:12px;
+  cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  text-align:left;transition:border-color .15s}
+.dd-btn:hover,.dd-btn:focus{outline:none;border-color:var(--accent)}
+.dd-btn .dd-count{color:var(--accent);font-size:10px;font-weight:600;white-space:nowrap;margin-left:6px}
+.dd-arrow{font-size:9px;color:var(--muted);margin-left:4px;transition:transform .15s;flex-shrink:0}
+.dd-panel{position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:200;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;flex-direction:column;max-height:240px}
+.dd-panel.open{display:flex}
+.dd-panel.open ~ .dd-btn .dd-arrow,.dd-wrap:has(.dd-panel.open) .dd-arrow{transform:rotate(180deg)}
+.dd-search{width:100%;background:var(--bg);border:none;border-bottom:1px solid var(--border);
+  color:var(--text);padding:7px 10px;font-size:11px;flex-shrink:0}
+.dd-search:focus{outline:none}
+.dd-list{overflow-y:auto;flex:1}
+.dd-item{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;
+  cursor:pointer;user-select:none;transition:background .1s}
+.dd-item:hover{background:rgba(79,142,247,.06)}
+.dd-item input[type=checkbox]{accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.dd-actions{display:flex;gap:6px;padding:5px 10px;border-top:1px solid var(--border);
+  background:var(--surface);flex-shrink:0}
+.dd-action{font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;padding:2px 4px;
+  border-radius:3px;transition:background .1s}
+.dd-action:hover{background:rgba(79,142,247,.1)}
 
-  /* Sidebar */
-  aside {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 20px 16px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.date-inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);padding:6px 8px;font-size:11px}
+.date-inp:focus{outline:none;border-color:var(--accent)}
 
-  .filter-group label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface2);border:1px solid var(--border);border-radius:5px;
+  padding:7px 10px;cursor:pointer;user-select:none}
+.toggle-row span{font-size:11px}
+.toggle{position:relative;width:34px;height:18px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-sl{position:absolute;inset:0;background:var(--border);border-radius:18px;transition:background .2s}
+.toggle-sl::before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;
+  background:white;border-radius:50%;transition:transform .2s}
+.toggle input:checked + .toggle-sl{background:var(--warn)}
+.toggle input:checked + .toggle-sl::before{transform:translateX(16px)}
+.warn-dot{width:7px;height:7px;border-radius:50%;background:var(--warn);display:inline-block;margin-right:5px}
 
-  .filter-group select, .filter-group input[type="date"] {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    padding: 7px 10px;
-    font-size: 13px;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .filter-group select:focus, .filter-group input[type="date"]:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  .filter-group select[multiple] { height: auto; min-height: 120px; padding: 4px; }
-  .filter-group select[multiple] option {
-    padding: 5px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .filter-group select[multiple] option:checked { background: var(--accent); color: #fff; }
+.reset-btn{width:100%;background:transparent;border:1px solid var(--border);border-radius:5px;
+  color:var(--muted);padding:8px;font-size:11px;cursor:pointer;transition:all .15s;margin-top:auto}
+.reset-btn:hover{border-color:var(--accent);color:var(--accent)}
 
-  .filter-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+/* ── MAIN ── */
+main{padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
 
-  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .date-row input { font-size: 12px; }
+/* KPI cards */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:13px 15px}
+.metric-card.accent{border-color:rgba(79,142,247,.25)}
+.metric-card .lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;margin-bottom:5px}
+.metric-card .val{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.metric-card .sub{font-size:10px;color:var(--muted);margin-top:2px}
 
-  /* Cargolive toggle */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .toggle-row span { font-size: 12px; }
-  .toggle-row .warn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: inline-block; margin-right: 6px; }
-  .toggle { position: relative; width: 36px; height: 20px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; inset: 0;
-    background: var(--border);
-    border-radius: 20px;
-    transition: background 0.2s;
-  }
-  .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    left: 3px; top: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--warn); }
-  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+/* Chart card */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:16px;
+  display:flex;flex-direction:column;gap:10px}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.chart-title{font-size:13px;font-weight:600}
+.chart-sub{font-size:11px;color:var(--muted)}
+.tog-group{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.tog-btn{background:transparent;border:none;color:var(--muted);padding:5px 11px;font-size:11px;
+  font-weight:500;cursor:pointer;transition:all .15s}
+.tog-btn.active{background:var(--accent);color:#fff}
+.tog-btn:hover:not(.active){color:var(--text)}
+.chart-wrap{position:relative;height:300px}
+#mainChart{position:absolute;inset:0}
 
-  .btn-reset {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    padding: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-top: auto;
-  }
-  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+/* Legend */
+#chartLegend{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:2px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);
+  cursor:pointer;padding:2px 5px;border-radius:3px;transition:opacity .15s}
+.leg-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.leg-item.hidden{opacity:.3}
+.leg-dot{width:12px;height:2px;border-radius:1px;flex-shrink:0}
+.leg-avg{font-size:9px;color:var(--muted);margin-left:2px}
 
-  /* Main content */
-  main { padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+/* Warn banner */
+.warn-banner{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.35);
+  border-radius:5px;padding:7px 11px;font-size:11px;color:var(--warn);
+  display:none;align-items:center;gap:7px}
+.warn-banner.visible{display:flex}
 
-  /* Metric cards */
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-  }
-  .metric-card .label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
-  .metric-card .value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-  .metric-card .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .metric-card.accent { border-color: rgba(79,142,247,0.3); }
+/* Exporter breakdown */
+.exp-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:16px;
+  display:flex;flex-direction:column;gap:10px}
+.exp-hdr{display:flex;align-items:center;justify-content:space-between}
+.exp-title{font-size:13px;font-weight:600}
+.exp-sub{font-size:11px;color:var(--muted)}
+.exp-chart-wrap{position:relative;height:260px}
+#expChart{position:absolute;inset:0}
+.exp-empty{display:flex;align-items:center;justify-content:center;height:120px;
+  color:var(--muted);font-size:12px}
 
-  /* Chart card */
-  .chart-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .chart-title { font-size: 14px; font-weight: 600; }
-  .chart-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .metric-toggle {
-    display: flex;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .metric-toggle button {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .metric-toggle button.active { background: var(--accent); color: white; }
-  .metric-toggle button:hover:not(.active) { color: var(--text); }
-
-  .agg-toggle {
-    display: flex;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .agg-toggle button {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 5px 10px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .agg-toggle button.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); margin: -1px; border-radius: 5px; }
-  .agg-toggle button:hover:not(.active) { color: var(--text); }
-
-  .chart-wrap { position: relative; flex: 1; min-height: 320px; }
-  canvas { position: absolute; inset: 0; }
-
-  /* Warning banner */
-  .warn-banner {
-    background: rgba(245,166,35,0.1);
-    border: 1px solid rgba(245,166,35,0.4);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
-    color: var(--warn);
-    display: none;
-    align-items: center;
-    gap: 8px;
-  }
-  .warn-banner.visible { display: flex; }
-  .warn-banner svg { flex-shrink: 0; }
-
-  /* Bottom row: table */
-  .table-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .table-card .table-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-card .table-title { font-size: 13px; font-weight: 600; }
-  .table-card .row-count { font-size: 11px; color: var(--muted); }
-
-  .table-scroll { overflow-x: auto; max-height: 260px; overflow-y: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead { position: sticky; top: 0; z-index: 1; }
-  thead tr { background: var(--bg); }
-  th {
-    padding: 8px 12px;
-    text-align: left;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    cursor: pointer;
-    user-select: none;
-  }
-  th:hover { color: var(--text); }
-  th .sort-icon { opacity: 0.4; margin-left: 3px; }
-  th.sorted .sort-icon { opacity: 1; color: var(--accent); }
-
-  tbody tr { border-bottom: 1px solid rgba(42,45,62,0.6); transition: background 0.1s; }
-  tbody tr:hover { background: rgba(79,142,247,0.05); }
-  tbody tr.non-bulk { background: rgba(245,166,35,0.05); }
-  tbody tr.non-bulk td:first-child::before {
-    content: '⚠';
-    margin-right: 6px;
-    color: var(--warn);
-    font-size: 10px;
-  }
-  td { padding: 7px 12px; white-space: nowrap; color: var(--text); }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.pos { color: #4CAF50; }
-  td.neg { color: var(--danger); }
-  td.tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-  }
-
-  .no-data {
-    text-align: center;
-    padding: 48px 20px;
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  /* Company color legend */
-  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 2px; }
-  .legend-item {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: var(--muted);
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .legend-item.muted { opacity: 0.35; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    aside { border-right: none; border-bottom: 1px solid var(--border); }
-    .metrics { grid-template-columns: repeat(2, 1fr); }
-  }
+/* Table */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
+  border-bottom:1px solid var(--border)}
+.table-title{font-size:12px;font-weight:600}
+.row-count{font-size:10px;color:var(--muted)}
+.table-scroll{overflow-x:auto;max-height:280px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead{position:sticky;top:0;z-index:1}
+thead tr{background:var(--bg)}
+th{padding:7px 11px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);
+  white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.sorted .sort-icon{opacity:1;color:var(--accent)}
+th .sort-icon{opacity:.3;margin-left:2px}
+tbody tr{border-bottom:1px solid rgba(42,45,62,.5);transition:background .1s}
+tbody tr:hover{background:rgba(79,142,247,.04)}
+tbody tr.non-bulk{background:rgba(245,166,35,.04)}
+tbody tr.non-bulk td:first-child::before{content:'⚠';margin-right:5px;color:var(--warn);font-size:9px}
+td{padding:6px 11px;white-space:nowrap}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.pos{color:#4caf50}
+td.neg{color:var(--danger)}
+.mode-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700}
+.no-data{text-align:center;padding:36px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -336,359 +171,511 @@
     <h1>ULSD Import Dashboard — Mexico</h1>
     <div class="subtitle">Ultra-Low Sulfur Diesel · Platts Differential Analysis</div>
   </div>
-  <div class="badge" id="rowCountBadge">Loading…</div>
+  <div class="hbadge" id="rowBadge">Loading…</div>
 </header>
 
 <div class="layout">
-  <!-- Sidebar Filters -->
-  <aside>
-    <div class="filter-group">
-      <label>Importer / Company</label>
-      <select id="filterImporter" multiple title="Hold Ctrl/Cmd to select multiple">
-      </select>
-      <div class="filter-hint">Ctrl+click to multi-select</div>
-    </div>
+<!-- SIDEBAR -->
+<aside>
 
-    <div class="filter-group">
-      <label>Transport Mode</label>
-      <select id="filterTransport" multiple>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label>Customs Office</label>
-      <select id="filterCustoms" multiple>
-      </select>
-      <div class="filter-hint">Ctrl+click to multi-select</div>
-    </div>
-
-    <div class="filter-group">
-      <label>Date Range</label>
-      <div class="date-row">
-        <input type="date" id="dateFrom" />
-        <input type="date" id="dateTo" />
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>Non-Bulk Cargolive Rows</label>
-      <label class="toggle-row" for="toggleNonBulk">
-        <span><span class="warn-dot"></span>Show flagged rows</span>
-        <div class="toggle">
-          <input type="checkbox" id="toggleNonBulk" />
-          <div class="toggle-slider"></div>
-        </div>
-      </label>
-      <div class="filter-hint">11 non-bulk Cargolive entries are flagged</div>
-    </div>
-
-    <button class="btn-reset" onclick="resetFilters()">↺ Reset all filters</button>
-  </aside>
-
-  <!-- Main content -->
-  <main>
-    <!-- KPI cards -->
-    <div class="metrics">
-      <div class="metric-card accent">
-        <div class="label">Transactions</div>
-        <div class="value" id="kpiTx">—</div>
-        <div class="sub" id="kpiTxSub">—</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Avg Differential</div>
-        <div class="value" id="kpiDiff">—</div>
-        <div class="sub">USD/gal weighted avg</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Avg Price Paid</div>
-        <div class="value" id="kpiPrice">—</div>
-        <div class="sub">USD/gal</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Total Volume</div>
-        <div class="value" id="kpiVol">—</div>
-        <div class="sub">gallons</div>
-      </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-card">
-      <div class="chart-header">
-        <div>
-          <div class="chart-title" id="chartTitle">Differential (USD/gal) over Time</div>
-          <div class="chart-sub">Weekly average · per importer</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <div class="agg-toggle">
-            <button class="active" data-agg="week" onclick="setAgg(this,'week')">Weekly</button>
-            <button data-agg="month" onclick="setAgg(this,'month')">Monthly</button>
-          </div>
-          <div class="metric-toggle">
-            <button class="active" data-metric="df" onclick="setMetric(this,'df','Differential (USD/gal)')">Differential</button>
-            <button data-metric="p" onclick="setMetric(this,'p','Price Paid (USD/gal)')">Price Paid</button>
-            <button data-metric="pl" onclick="setMetric(this,'pl','Platts (USD/gal)')">Platts</button>
-          </div>
+  <!-- Importer -->
+  <div>
+    <label class="fg-label">Importer / Company</label>
+    <div class="dd-wrap" id="ddWrap-imp">
+      <button class="dd-btn" onclick="toggleDd('imp')">
+        <span id="ddLabel-imp">All</span>
+        <span style="display:flex;align-items:center">
+          <span class="dd-count" id="ddCount-imp"></span>
+          <span class="dd-arrow">▼</span>
+        </span>
+      </button>
+      <div class="dd-panel" id="ddPanel-imp">
+        <input class="dd-search" placeholder="Search importers…" oninput="filterDdList('imp',this.value)">
+        <div class="dd-list" id="ddList-imp"></div>
+        <div class="dd-actions">
+          <button class="dd-action" onclick="ddSelectAll('imp')">Select All</button>
+          <button class="dd-action" onclick="ddSelectNone('imp')">Clear</button>
         </div>
       </div>
+    </div>
+  </div>
 
-      <div id="warnBanner" class="warn-banner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span id="warnText"></span>
+  <!-- Transport Mode -->
+  <div>
+    <label class="fg-label">Transport Mode</label>
+    <div class="dd-wrap" id="ddWrap-mode">
+      <button class="dd-btn" onclick="toggleDd('mode')">
+        <span id="ddLabel-mode">All</span>
+        <span style="display:flex;align-items:center">
+          <span class="dd-count" id="ddCount-mode"></span>
+          <span class="dd-arrow">▼</span>
+        </span>
+      </button>
+      <div class="dd-panel" id="ddPanel-mode">
+        <div class="dd-list" id="ddList-mode"></div>
+        <div class="dd-actions">
+          <button class="dd-action" onclick="ddSelectAll('mode')">Select All</button>
+          <button class="dd-action" onclick="ddSelectNone('mode')">Clear</button>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <div class="legend" id="chartLegend"></div>
+  <!-- Customs Office -->
+  <div>
+    <label class="fg-label">Customs Office</label>
+    <div class="dd-wrap" id="ddWrap-co">
+      <button class="dd-btn" onclick="toggleDd('co')">
+        <span id="ddLabel-co">All</span>
+        <span style="display:flex;align-items:center">
+          <span class="dd-count" id="ddCount-co"></span>
+          <span class="dd-arrow">▼</span>
+        </span>
+      </button>
+      <div class="dd-panel" id="ddPanel-co">
+        <input class="dd-search" placeholder="Search offices…" oninput="filterDdList('co',this.value)">
+        <div class="dd-list" id="ddList-co"></div>
+        <div class="dd-actions">
+          <button class="dd-action" onclick="ddSelectAll('co')">Select All</button>
+          <button class="dd-action" onclick="ddSelectNone('co')">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <div class="chart-wrap">
-        <canvas id="mainChart"></canvas>
+  <!-- Exporter -->
+  <div>
+    <label class="fg-label">Exporter</label>
+    <div class="dd-wrap" id="ddWrap-exp">
+      <button class="dd-btn" onclick="toggleDd('exp')">
+        <span id="ddLabel-exp">All</span>
+        <span style="display:flex;align-items:center">
+          <span class="dd-count" id="ddCount-exp"></span>
+          <span class="dd-arrow">▼</span>
+        </span>
+      </button>
+      <div class="dd-panel" id="ddPanel-exp">
+        <input class="dd-search" placeholder="Search exporters…" oninput="filterDdList('exp',this.value)">
+        <div class="dd-list" id="ddList-exp"></div>
+        <div class="dd-actions">
+          <button class="dd-action" onclick="ddSelectAll('exp')">Select All</button>
+          <button class="dd-action" onclick="ddSelectNone('exp')">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Date Range -->
+  <div>
+    <label class="fg-label">Date Range</label>
+    <div class="date-row">
+      <input type="date" id="dateFrom" class="date-inp">
+      <input type="date" id="dateTo" class="date-inp">
+    </div>
+  </div>
+
+  <!-- Non-bulk toggle -->
+  <div>
+    <label class="fg-label">Non-Bulk Cargolive</label>
+    <label class="toggle-row" for="toggleNonBulk">
+      <span><span class="warn-dot"></span>Show flagged rows</span>
+      <div class="toggle">
+        <input type="checkbox" id="toggleNonBulk">
+        <div class="toggle-sl"></div>
+      </div>
+    </label>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px">11 non-bulk Cargolive entries flagged</div>
+  </div>
+
+  <button class="reset-btn" onclick="resetFilters()">↺ Reset All Filters</button>
+</aside>
+
+<!-- MAIN -->
+<main>
+
+  <!-- KPI Cards -->
+  <div class="metrics">
+    <div class="metric-card accent">
+      <div class="lbl">Transactions</div>
+      <div class="val" id="kpiTx">—</div>
+      <div class="sub" id="kpiTxSub">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="lbl">Avg Differential</div>
+      <div class="val" id="kpiDiff">—</div>
+      <div class="sub">USD/gal weighted avg</div>
+    </div>
+    <div class="metric-card">
+      <div class="lbl">Avg Price Paid</div>
+      <div class="val" id="kpiPrice">—</div>
+      <div class="sub">USD/gal</div>
+    </div>
+    <div class="metric-card">
+      <div class="lbl">Total Volume</div>
+      <div class="val" id="kpiVol">—</div>
+      <div class="sub">gallons</div>
+    </div>
+  </div>
+
+  <!-- Main Chart -->
+  <div class="chart-card">
+    <div class="chart-hdr">
+      <div>
+        <div class="chart-title" id="chartTitle">Differential (USD/gal) over Time</div>
+        <div class="chart-sub">Weekly average · per importer · dashed lines = period avg</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div class="tog-group" id="aggTog">
+          <button class="tog-btn active" onclick="setAgg('week',this)">Weekly</button>
+          <button class="tog-btn" onclick="setAgg('month',this)">Monthly</button>
+        </div>
+        <div class="tog-group" id="metricTog">
+          <button class="tog-btn active" onclick="setMetric('df',this)">Differential</button>
+          <button class="tog-btn" onclick="setMetric('p',this)">Price Paid</button>
+          <button class="tog-btn" onclick="setMetric('pl',this)">Platts</button>
+          <button class="tog-btn" onclick="setMetric('rv',this)">RVO</button>
+        </div>
       </div>
     </div>
 
-    <!-- Data table -->
-    <div class="table-card">
-      <div class="table-header">
-        <div class="table-title">Raw Transactions</div>
-        <div class="row-count" id="tableCount">—</div>
+    <div id="warnBanner" class="warn-banner">
+      <span>⚠</span><span id="warnText"></span>
+    </div>
+
+    <div id="chartLegend"></div>
+
+    <div class="chart-wrap">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Exporter Breakdown -->
+  <div class="exp-card">
+    <div class="exp-hdr">
+      <div>
+        <div class="exp-title">Exporter Breakdown</div>
+        <div class="exp-sub" id="expSub">Volume by exporter · click bar to filter</div>
       </div>
-      <div class="table-scroll">
-        <table id="dataTable">
-          <thead>
-            <tr>
-              <th onclick="sortTable('d')" id="th-d">Date <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('imp')" id="th-imp">Importer <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('co')" id="th-co">Customs Office <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('tm')" id="th-tm">Mode <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('df')" id="th-df">Differential <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('p')" id="th-p">Price Paid <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('pl')" id="th-pl">Platts <span class="sort-icon">↕</span></th>
-              <th onclick="sortTable('q')" id="th-q">Gallons <span class="sort-icon">↕</span></th>
-              <th>Bulk</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-        <div id="noData" class="no-data" style="display:none;">No data matches the current filters.</div>
+      <div class="tog-group">
+        <button class="tog-btn active" onclick="setExpMetric('gal',this)">Volume (gal)</button>
+        <button class="tog-btn" onclick="setExpMetric('tx',this)">Transactions</button>
       </div>
     </div>
-  </main>
+    <div class="exp-chart-wrap">
+      <canvas id="expChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-hdr">
+      <div class="table-title">Raw Transactions</div>
+      <div class="row-count" id="tableCount">—</div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('d')" id="th-d">Date <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('imp')" id="th-imp">Importer <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('exp')" id="th-exp">Exporter <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('co')" id="th-co">Customs Office <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('tm')" id="th-tm">Mode <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('df')" id="th-df">Differential <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('p')" id="th-p">Price Paid <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('pl')" id="th-pl">Platts <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('rv')" id="th-rv">RVO <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('q')" id="th-q">Gallons <span class="sort-icon">↕</span></th>
+            <th>Bulk</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="noData" class="no-data" style="display:none">No data matches the current filters.</div>
+    </div>
+  </div>
+
+</main>
 </div>
 
 <script>
-// ── Company color palette ──────────────────────────────────────────────
-const PALETTE = [
-  '#4f8ef7','#f5a623','#27ae60','#e74c3c','#9b59b6',
-  '#1abc9c','#e67e22','#3498db','#e91e63','#00bcd4',
-  '#8bc34a','#ff5722','#607d8b','#795548','#ff9800'
-];
-
-// Short display names for importers
+// ── Short display names ───────────────────────────────────────────────────────
 const SHORT_NAME = {
-  'BP ESTACIONES Y SERVICIOS ENERGETICOS SA DE CV': 'BP Estaciones',
-  'CARGOLIVE S. DE R.L. DE C.V.': 'Cargolive',
-  'COMBUSTIBLES DE ORIENTE SA CV': 'Combustibles de Oriente',
-  'COMERCIALIZADORA DE HIDROCARBUROS NOIL S A P I DE CV': 'NOIL',
-  'ENERGAS DE MEXICO SA DE CV': 'Energas de Mexico',
-  'EXXONMOBIL MEXICO SA DE CV': 'ExxonMobil Mexico',
-  'GLENCORE ENERGY MX SA DE CV': 'Glencore MX',
-  'INGEMAR SA DE CV': 'Ingemar',
-  'L.E. INTERNATIONAL FUEL SUPPLY SA DE CV': 'LE International',
-  'P.M.I. TRADING MEXICO SA DE CV': 'PMI Trading',
-  'PETROLEOS MEXICANOS': 'Pemex',
-  'PETROTAL SA DE CV': 'Petrotal',
-  'SHELL MEXICO SA DE CV': 'Shell Mexico',
-  'VALERO MARKETING AND SUPPLY DE MEXICO SA DE CV': 'Valero Mexico',
-  '"KOCH SUPPLY & TRADING MEXICO': 'Koch S&T Mexico',
-  '"TESORO MEXICO SUPPLY & MARKETING': 'Tesoro Mexico',
+  'BP ESTACIONES Y SERVICIOS ENERGETICOS SA DE CV':'BP Estaciones',
+  'CARGOLIVE S. DE R.L. DE C.V.':'Cargolive',
+  'COMBUSTIBLES DE ORIENTE SA CV':'Combustibles de Oriente',
+  'COMERCIALIZADORA DE HIDROCARBUROS NOIL S A P I DE CV':'NOIL',
+  'ENERGAS DE MEXICO SA DE CV':'Energas de Mexico',
+  'EXXONMOBIL MEXICO SA DE CV':'ExxonMobil Mexico',
+  'GLENCORE ENERGY MX SA DE CV':'Glencore MX',
+  'INGEMAR SA DE CV':'Ingemar',
+  'L.E. INTERNATIONAL FUEL SUPPLY SA DE CV':'LE Intl Fuel',
+  'P.M.I. TRADING MEXICO SA DE CV':'PMI Trading',
+  'PETROLEOS MEXICANOS':'Pemex',
+  'PETROTAL SA DE CV':'Petrotal',
+  'SHELL MEXICO SA DE CV':'Shell Mexico',
+  'VALERO MARKETING AND SUPPLY DE MEXICO SA DE CV':'Valero Mexico',
+  '"KOCH SUPPLY & TRADING MEXICO':'Koch Mexico',
+  '"TESORO MEXICO SUPPLY & MARKETING':'Tesoro Mexico',
+};
+const sn = s => SHORT_NAME[s] || s;
+const expShort = s => (!s || s === 'N/A') ? 'N/A' : s.length > 38 ? s.slice(0,36)+'…' : s;
+
+const MODE_COLORS = {ROAD:'#10b981',MARITIME:'#38bdf8',RAIL:'#f59e0b',PIPELINE:'#a78bfa'};
+const PALETTE = ['#4f8ef7','#f5a623','#27ae60','#e74c3c','#9b59b6','#1abc9c','#e67e22','#3498db','#e91e63','#00bcd4','#8bc34a','#ff5722','#607d8b','#795548','#ff9800'];
+
+const METRIC_LABELS = {
+  df:'Differential (USD/gal) over Time',
+  p:'Price Paid (USD/gal) over Time',
+  pl:'Platts (USD/gal) over Time',
+  rv:'RVO (USD/gal) over Time',
 };
 
-function shortName(s) { return SHORT_NAME[s] || s; }
-
-// ── State ─────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 let currentMetric = 'df';
-let currentAgg = 'week';
-let sortField = 'd';
-let sortDir = -1; // -1 desc, 1 asc
+let currentAgg    = 'week';
+let currentExpMetric = 'gal';
+let sortField = 'd', sortDir = -1;
+let chart = null, expChart = null;
 let hiddenCompanies = new Set();
-let chart = null;
 let filteredData = [];
 
-// ── Helpers ───────────────────────────────────────────────────────────
-function getSelectedValues(el) {
-  return Array.from(el.selectedOptions).map(o => o.value);
+// Dropdown state: maps dd-id → Set of selected values
+const ddSelected = { imp: new Set(), mode: new Set(), co: new Set(), exp: new Set() };
+// All unique values for each dimension
+const ddAll = { imp: [], mode: [], co: [], exp: [] };
+
+// ── Dropdown helpers ──────────────────────────────────────────────────────────
+function toggleDd(id) {
+  const panel = document.getElementById(`ddPanel-${id}`);
+  const isOpen = panel.classList.contains('open');
+  // close all
+  document.querySelectorAll('.dd-panel.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) panel.classList.add('open');
 }
 
-function weekKey(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d.setDate(diff));
-  return mon.toISOString().slice(0,10);
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dd-wrap')) {
+    document.querySelectorAll('.dd-panel.open').forEach(p => p.classList.remove('open'));
+  }
+});
+
+function buildDdList(id, items, selectedSet) {
+  const list = document.getElementById(`ddList-${id}`);
+  list.innerHTML = '';
+  items.forEach(val => {
+    const label = document.createElement('label');
+    label.className = 'dd-item';
+    label.title = val;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = val;
+    cb.checked = selectedSet.size === 0 || selectedSet.has(val);
+    cb.addEventListener('change', () => { syncDdState(id); applyFilters(); });
+    label.appendChild(cb);
+    const txt = document.createElement('span');
+    txt.textContent = id === 'imp' ? sn(val) : id === 'exp' ? expShort(val) : val;
+    label.appendChild(txt);
+    list.appendChild(label);
+  });
+  updateDdLabel(id);
 }
 
-function monthKey(dateStr) { return dateStr.slice(0,7) + '-01'; }
-
-function aggKey(dateStr, agg) { return agg === 'week' ? weekKey(dateStr) : monthKey(dateStr); }
-
-function fmt(v, decimals=4) {
-  if (v == null) return '—';
-  return v.toFixed(decimals);
+function filterDdList(id, query) {
+  const list = document.getElementById(`ddList-${id}`);
+  const q = query.toLowerCase();
+  list.querySelectorAll('.dd-item').forEach(item => {
+    const txt = item.querySelector('span').textContent.toLowerCase();
+    item.style.display = txt.includes(q) ? '' : 'none';
+  });
 }
 
-function fmtNum(n) {
-  if (n == null || isNaN(n)) return '—';
-  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
-  return n.toFixed(0);
+function syncDdState(id) {
+  const list = document.getElementById(`ddList-${id}`);
+  const all = [...list.querySelectorAll('input[type=checkbox]')];
+  const checked = all.filter(cb => cb.checked);
+  if (checked.length === all.length) {
+    ddSelected[id].clear();
+  } else {
+    ddSelected[id] = new Set(checked.map(cb => cb.value));
+  }
+  updateDdLabel(id);
 }
 
-// ── Populate filters ─────────────────────────────────────────────────
+function updateDdLabel(id) {
+  const list = document.getElementById(`ddList-${id}`);
+  const all = [...list.querySelectorAll('input[type=checkbox]')];
+  const checked = all.filter(cb => cb.checked).length;
+  const lbl = document.getElementById(`ddLabel-${id}`);
+  const cnt = document.getElementById(`ddCount-${id}`);
+  if (checked === all.length) {
+    lbl.textContent = 'All';
+    cnt.textContent = '';
+  } else {
+    lbl.textContent = `${checked} selected`;
+    cnt.textContent = `of ${all.length}`;
+  }
+}
+
+function ddSelectAll(id) {
+  const list = document.getElementById(`ddList-${id}`);
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+  ddSelected[id].clear();
+  updateDdLabel(id);
+  applyFilters();
+}
+
+function ddSelectNone(id) {
+  const list = document.getElementById(`ddList-${id}`);
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  const items = ddAll[id];
+  ddSelected[id] = new Set(items); // all selected = none shown (empty result)
+  // Actually set to empty set to mean "none selected" = show nothing
+  ddSelected[id] = new Set(['__NONE__']);
+  updateDdLabel(id);
+  applyFilters();
+}
+
+// ── Populate filters ──────────────────────────────────────────────────────────
 function populateFilters() {
-  const importers = [...new Set(RAW_DATA.map(r => r.imp))].sort();
-  const transports = [...new Set(RAW_DATA.map(r => r.tm))].sort();
-  const customs = [...new Set(RAW_DATA.map(r => r.co))].sort();
+  ddAll.imp  = [...new Set(RAW_DATA.map(r => r.imp))].sort((a,b) => sn(a).localeCompare(sn(b)));
+  ddAll.mode = [...new Set(RAW_DATA.map(r => r.tm))].sort();
+  ddAll.co   = [...new Set(RAW_DATA.map(r => r.co))].sort();
+  ddAll.exp  = [...new Set(RAW_DATA.map(r => r.exp || 'N/A'))].filter(Boolean).sort();
 
-  const impSel = document.getElementById('filterImporter');
-  importers.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = shortName(v);
-    impSel.appendChild(o);
-  });
+  buildDdList('imp',  ddAll.imp,  ddSelected.imp);
+  buildDdList('mode', ddAll.mode, ddSelected.mode);
+  buildDdList('co',   ddAll.co,   ddSelected.co);
+  buildDdList('exp',  ddAll.exp,  ddSelected.exp);
 
-  const tmSel = document.getElementById('filterTransport');
-  transports.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    tmSel.appendChild(o);
-  });
-
-  const coSel = document.getElementById('filterCustoms');
-  customs.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    coSel.appendChild(o);
-  });
-
-  // Date range defaults
   const dates = RAW_DATA.map(r => r.d).sort();
   document.getElementById('dateFrom').value = dates[0];
-  document.getElementById('dateTo').value = dates[dates.length-1];
+  document.getElementById('dateTo').value   = dates[dates.length-1];
 }
 
-// ── Apply filters ─────────────────────────────────────────────────────
+// ── Apply filters ─────────────────────────────────────────────────────────────
 function applyFilters() {
-  const selImporters = getSelectedValues(document.getElementById('filterImporter'));
-  const selTransports = getSelectedValues(document.getElementById('filterTransport'));
-  const selCustoms = getSelectedValues(document.getElementById('filterCustoms'));
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
-  const showNonBulk = document.getElementById('toggleNonBulk').checked;
+  const dateFrom     = document.getElementById('dateFrom').value;
+  const dateTo       = document.getElementById('dateTo').value;
+  const showNonBulk  = document.getElementById('toggleNonBulk').checked;
+  const selImp  = ddSelected.imp;
+  const selMode = ddSelected.mode;
+  const selCo   = ddSelected.co;
+  const selExp  = ddSelected.exp;
 
   filteredData = RAW_DATA.filter(r => {
-    if (selImporters.length && !selImporters.includes(r.imp)) return false;
-    if (selTransports.length && !selTransports.includes(r.tm)) return false;
-    if (selCustoms.length && !selCustoms.includes(r.co)) return false;
-    if (dateFrom && r.d < dateFrom) return false;
-    if (dateTo && r.d > dateTo) return false;
-    // Non-bulk Cargolive: exclude unless toggle is on
-    if (!r.b && !showNonBulk) return false;
+    if (selImp.size  && !selImp.has(r.imp))          return false;
+    if (selMode.size && !selMode.has(r.tm))           return false;
+    if (selCo.size   && !selCo.has(r.co))             return false;
+    if (selExp.size  && !selExp.has(r.exp || 'N/A'))  return false;
+    if (dateFrom && r.d < dateFrom)                   return false;
+    if (dateTo   && r.d > dateTo)                     return false;
+    if (!r.b && !showNonBulk)                         return false;
     return true;
   });
 
+  document.getElementById('rowBadge').textContent = filteredData.length.toLocaleString() + ' rows';
   updateKPIs();
   updateChart();
+  updateExporterChart();
   updateTable();
-  updateWarningBanner();
-  updateRowBadge();
+  updateWarnBanner();
 }
 
-function updateRowBadge() {
-  document.getElementById('rowCountBadge').textContent = filteredData.length.toLocaleString() + ' rows';
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────────
+// ── KPIs ──────────────────────────────────────────────────────────────────────
 function updateKPIs() {
   const n = filteredData.length;
   const companies = new Set(filteredData.map(r => r.imp)).size;
   document.getElementById('kpiTx').textContent = n.toLocaleString();
   document.getElementById('kpiTxSub').textContent = companies + ' importer' + (companies !== 1 ? 's' : '');
 
-  let totalQ = 0, sumDiff = 0, sumPrice = 0, validD = 0, validP = 0;
+  let tq=0, sdq=0, spq=0, wq=0;
   for (const r of filteredData) {
     const q = r.q || 0;
-    totalQ += q;
-    if (r.df != null) { sumDiff += r.df * q; validD += q; }
-    if (r.p != null)  { sumPrice += r.p * q; validP += q; }
+    tq += q;
+    if (r.df != null) { sdq += r.df * q; }
+    if (r.p  != null) { spq += r.p  * q; wq += q; }
   }
-
-  document.getElementById('kpiDiff').textContent = validD ? '$' + (sumDiff/validD).toFixed(4) : '—';
-  document.getElementById('kpiPrice').textContent = validP ? '$' + (sumPrice/validP).toFixed(4) : '—';
-  document.getElementById('kpiVol').textContent = fmtNum(totalQ);
+  document.getElementById('kpiDiff').textContent  = tq  ? '$'+(sdq/tq).toFixed(4) : '—';
+  document.getElementById('kpiPrice').textContent = wq  ? '$'+(spq/wq).toFixed(4) : '—';
+  document.getElementById('kpiVol').textContent   = fmtNum(tq);
 }
 
-// ── Warning banner ────────────────────────────────────────────────────
-function updateWarningBanner() {
-  const nonBulk = filteredData.filter(r => !r.b);
-  const banner = document.getElementById('warnBanner');
-  if (nonBulk.length > 0) {
-    banner.classList.add('visible');
-    document.getElementById('warnText').textContent =
-      `${nonBulk.length} non-bulk Cargolive row${nonBulk.length>1?'s':''} included in view. These are likely non-commercial fuel deliveries (e.g. Formula One). Differentials may not be representative.`;
-  } else {
-    banner.classList.remove('visible');
-  }
+// ── Aggregation helpers ───────────────────────────────────────────────────────
+function weekKey(d) {
+  const dt = new Date(d), day = dt.getDay();
+  const mon = new Date(dt); mon.setDate(dt.getDate() - (day === 0 ? 6 : day-1));
+  return mon.toISOString().slice(0,10);
 }
+function monthKey(d) { return d.slice(0,7)+'-01'; }
+function aggKey(d) { return currentAgg === 'week' ? weekKey(d) : monthKey(d); }
 
-// ── Chart ─────────────────────────────────────────────────────────────
-const METRIC_LABELS = { df: 'Differential (USD/gal)', p: 'Price Paid (USD/gal)', pl: 'Platts (USD/gal)' };
-
-function buildChartData() {
-  // Group by company → aggKey → weighted avg
-  const companies = [...new Set(filteredData.map(r => r.imp))].sort();
-  const dateMap = {}; // company → { key → {sum, weight} }
-
+function buildChartDatasets() {
+  const companies = [...new Set(filteredData.map(r => r.imp))].sort((a,b)=>sn(a).localeCompare(sn(b)));
+  const byComp = {};
   for (const r of filteredData) {
-    if (r[currentMetric] == null) continue;
-    const key = aggKey(r.d, currentAgg);
-    if (!dateMap[r.imp]) dateMap[r.imp] = {};
-    if (!dateMap[r.imp][key]) dateMap[r.imp][key] = { sum: 0, w: 0 };
+    const val = r[currentMetric];
+    if (val == null) continue;
+    const k = aggKey(r.d);
+    if (!byComp[r.imp]) byComp[r.imp] = {};
+    if (!byComp[r.imp][k]) byComp[r.imp][k] = {sum:0, w:0};
     const w = r.q || 1;
-    dateMap[r.imp][key].sum += r[currentMetric] * w;
-    dateMap[r.imp][key].w += w;
+    byComp[r.imp][k].sum += val * w;
+    byComp[r.imp][k].w   += w;
   }
 
-  const allKeys = [...new Set(Object.values(dateMap).flatMap(d => Object.keys(d)))].sort();
-
-  const datasets = companies
-    .filter(c => dateMap[c] && Object.keys(dateMap[c]).length > 0)
-    .map((c, i) => {
-      const color = PALETTE[i % PALETTE.length];
-      return {
-        label: shortName(c),
-        fullLabel: c,
-        data: allKeys.map(k => {
-          const entry = dateMap[c]?.[k];
-          return entry ? { x: k, y: +(entry.sum / entry.w).toFixed(4) } : null;
-        }).filter(p => p !== null),
-        borderColor: color,
-        backgroundColor: color + '22',
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        borderWidth: 2,
-        tension: 0.3,
-        spanGaps: false,
-        hidden: hiddenCompanies.has(c),
-      };
-    });
-
-  return datasets;
+  return companies.filter(c => byComp[c]).map((c, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const pts = Object.entries(byComp[c])
+      .sort(([a],[b]) => a.localeCompare(b))
+      .map(([k, a]) => ({ x: k, y: +(a.sum/a.w).toFixed(4) }));
+    return {
+      label: sn(c), _imp: c,
+      data: pts,
+      borderColor: color, backgroundColor: color+'22',
+      pointRadius: 3, pointHoverRadius: 5,
+      borderWidth: 2, tension: 0.3, spanGaps: false,
+      hidden: hiddenCompanies.has(c),
+    };
+  });
 }
 
+function buildAvgAnnotations(datasets) {
+  const anns = {};
+  datasets.forEach((ds, i) => {
+    if (ds.hidden || !ds.data.length) return;
+    const avg = ds.data.reduce((s,p) => s + p.y, 0) / ds.data.length;
+    anns[`avg_${i}`] = {
+      type: 'line',
+      yMin: avg, yMax: avg,
+      borderColor: ds.borderColor,
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: `${ds.label}  $${avg.toFixed(3)}`,
+        position: 'end',
+        backgroundColor: 'rgba(15,17,23,0.85)',
+        color: ds.borderColor,
+        font: { size: 8, family: 'Inter, system-ui' },
+        padding: { x: 4, y: 2 },
+        borderRadius: 3,
+      }
+    };
+  });
+  return anns;
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
 function updateChart() {
-  const datasets = buildChartData();
-  document.getElementById('chartTitle').textContent = METRIC_LABELS[currentMetric] + ' over Time';
+  const datasets = buildChartDatasets();
+  document.getElementById('chartTitle').textContent = METRIC_LABELS[currentMetric];
+  const annotations = buildAvgAnnotations(datasets);
 
   if (chart) {
     chart.data.datasets = datasets;
+    chart.options.plugins.annotation = { annotations };
+    chart.options.scales.x.time.unit = currentAgg === 'week' ? 'week' : 'month';
     chart.update('none');
   } else {
     const ctx = document.getElementById('mainChart').getContext('2d');
@@ -696,20 +683,27 @@ function updateChart() {
       type: 'line',
       data: { datasets },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'nearest', intersect: false },
         plugins: {
           legend: { display: false },
+          annotation: { annotations },
           tooltip: {
             backgroundColor: '#1a1d27',
-            borderColor: '#2a2d3e',
-            borderWidth: 1,
-            titleColor: '#e8eaf0',
-            bodyColor: '#7a7f96',
+            borderColor: '#2a2d3e', borderWidth: 1,
+            titleColor: '#e8eaf0', bodyColor: '#7a7f96',
             padding: 10,
             callbacks: {
-              label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(4)}/gal`
+              label: ctx => {
+                const v = ctx.parsed.y;
+                const lines = [`${ctx.dataset.label}: $${v.toFixed(4)}/gal`];
+                if (currentMetric === 'df') {
+                  const avgDs = chart.data.datasets[ctx.datasetIndex];
+                  const avg   = avgDs.data.reduce((s,p)=>s+p.y,0)/avgDs.data.length;
+                  lines.push(`Period avg: $${avg.toFixed(4)}/gal`);
+                }
+                return lines;
+              }
             }
           }
         },
@@ -717,144 +711,261 @@ function updateChart() {
           x: {
             type: 'time',
             time: { unit: currentAgg === 'week' ? 'week' : 'month', tooltipFormat: 'MMM d, yyyy' },
-            grid: { color: 'rgba(42,45,62,0.5)' },
-            ticks: { color: '#7a7f96', maxTicksLimit: 12 }
+            grid: { color: 'rgba(42,45,62,0.6)' },
+            ticks: { color: '#7a7f96', maxTicksLimit: 14 }
           },
           y: {
-            grid: { color: 'rgba(42,45,62,0.5)' },
-            ticks: {
-              color: '#7a7f96',
-              callback: v => '$' + v.toFixed(2)
-            }
+            grid: { color: 'rgba(42,45,62,0.6)' },
+            ticks: { color: '#7a7f96', callback: v => '$'+v.toFixed(2) }
           }
         }
       }
     });
   }
-
-  buildLegend(datasets);
+  renderLegend(datasets);
 }
 
-function buildLegend(datasets) {
-  const legend = document.getElementById('chartLegend');
-  legend.innerHTML = '';
+function renderLegend(datasets) {
+  const leg = document.getElementById('chartLegend');
+  leg.innerHTML = '';
   datasets.forEach((ds, i) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item' + (ds.hidden ? ' muted' : '');
-    item.innerHTML = `<div class="legend-dot" style="background:${ds.borderColor}"></div><span>${ds.label}</span>`;
-    item.onclick = () => toggleCompany(ds.fullLabel, item, i);
-    legend.appendChild(item);
+    const avg = ds.data.length ? (ds.data.reduce((s,p)=>s+p.y,0)/ds.data.length).toFixed(3) : null;
+    const el = document.createElement('div');
+    el.className = 'leg-item' + (hiddenCompanies.has(ds._imp) ? ' hidden' : '');
+    el.innerHTML = `<div class="leg-dot" style="background:${ds.borderColor}"></div>
+      <span>${ds.label}</span>
+      ${avg ? `<span class="leg-avg">avg $${avg}</span>` : ''}`;
+    el.onclick = () => {
+      if (hiddenCompanies.has(ds._imp)) hiddenCompanies.delete(ds._imp);
+      else hiddenCompanies.add(ds._imp);
+      if (chart) {
+        chart.data.datasets[i].hidden = hiddenCompanies.has(ds._imp);
+        chart.options.plugins.annotation = { annotations: buildAvgAnnotations(chart.data.datasets) };
+        chart.update();
+      }
+      el.classList.toggle('hidden');
+      // re-render legend to update avg labels
+      renderLegend(chart.data.datasets);
+    };
+    leg.appendChild(el);
   });
 }
 
-function toggleCompany(fullLabel, el, dsIdx) {
-  if (hiddenCompanies.has(fullLabel)) {
-    hiddenCompanies.delete(fullLabel);
-    el.classList.remove('muted');
-  } else {
-    hiddenCompanies.add(fullLabel);
-    el.classList.add('muted');
+// ── Exporter breakdown chart ──────────────────────────────────────────────────
+function updateExporterChart() {
+  const expAgg = {};
+  for (const r of filteredData) {
+    const exp = r.exp || 'N/A';
+    if (!expAgg[exp]) expAgg[exp] = { gal: 0, tx: 0 };
+    expAgg[exp].gal += r.q  || 0;
+    expAgg[exp].tx  += 1;
   }
-  if (chart && chart.data.datasets[dsIdx]) {
-    chart.data.datasets[dsIdx].hidden = hiddenCompanies.has(fullLabel);
-    chart.update();
+
+  const sorted = Object.entries(expAgg)
+    .sort((a,b) => b[1][currentExpMetric] - a[1][currentExpMetric])
+    .slice(0, 20);
+
+  const labels = sorted.map(([k]) => expShort(k));
+  const values = sorted.map(([,v]) => currentExpMetric === 'gal' ? +(v.gal/1e6).toFixed(2) : v.tx);
+  const colors = sorted.map((_, i) => PALETTE[i % PALETTE.length]);
+
+  document.getElementById('expSub').textContent =
+    `${Object.keys(expAgg).length} exporters · top ${sorted.length} shown · click bar to filter`;
+
+  if (expChart) {
+    expChart.data.labels   = labels;
+    expChart.data.datasets[0].data   = values;
+    expChart.data.datasets[0].backgroundColor = colors.map(c => c+'99');
+    expChart.data.datasets[0].borderColor      = colors;
+    expChart.options.scales.x.title.text =
+      currentExpMetric === 'gal' ? 'Volume (M gal)' : 'Transactions';
+    expChart.update('none');
+  } else {
+    const ctx = document.getElementById('expChart').getContext('2d');
+    expChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: currentExpMetric === 'gal' ? 'Volume (M gal)' : 'Transactions',
+          data: values,
+          backgroundColor: colors.map(c => c+'99'),
+          borderColor: colors,
+          borderWidth: 1,
+          borderRadius: 3,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1d27', borderColor: '#2a2d3e', borderWidth: 1,
+            callbacks: {
+              label: ctx => {
+                const raw = sorted[ctx.dataIndex];
+                return currentExpMetric === 'gal'
+                  ? ` ${ctx.parsed.x.toFixed(2)}M gal  (${raw[1].tx.toLocaleString()} transactions)`
+                  : ` ${ctx.parsed.x.toLocaleString()} transactions`;
+              }
+            }
+          },
+          annotation: {}
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(42,45,62,0.6)' },
+            ticks: { color: '#7a7f96', font: { size: 10 } },
+            title: { display: true, text: currentExpMetric === 'gal' ? 'Volume (M gal)' : 'Transactions', color: '#7a7f96', font: { size: 10 } }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: '#e8eaf0', font: { size: 10 } }
+          }
+        },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          const expName = sorted[elements[0].index][0];
+          // Toggle exporter in filter
+          const list = document.getElementById('ddList-exp');
+          const cb = [...list.querySelectorAll('input')].find(cb => cb.value === expName);
+          if (cb) {
+            // If all selected, switch to just this one
+            const allCbs = [...list.querySelectorAll('input')];
+            const allChecked = allCbs.every(c => c.checked);
+            if (allChecked) {
+              allCbs.forEach(c => c.checked = false);
+              cb.checked = true;
+            } else {
+              cb.checked = !cb.checked;
+            }
+            syncDdState('exp');
+            applyFilters();
+          }
+        }
+      }
+    });
   }
 }
 
-// ── Table ─────────────────────────────────────────────────────────────
-const TABLE_PAGE = 500;
-
+// ── Table ─────────────────────────────────────────────────────────────────────
+const TABLE_MAX = 500;
 function updateTable() {
-  const sorted = [...filteredData].sort((a, b) => {
+  const sorted = [...filteredData].sort((a,b) => {
     let av = a[sortField], bv = b[sortField];
     if (av == null) av = sortDir > 0 ? Infinity : -Infinity;
     if (bv == null) bv = sortDir > 0 ? Infinity : -Infinity;
-    if (typeof av === 'string') return av.localeCompare(bv) * sortDir;
-    return (av - bv) * sortDir;
+    return typeof av === 'string' ? av.localeCompare(bv)*sortDir : (av-bv)*sortDir;
   });
 
-  const tbody = document.getElementById('tableBody');
+  const tbody  = document.getElementById('tableBody');
   const noData = document.getElementById('noData');
-  document.getElementById('tableCount').textContent = sorted.length.toLocaleString() + ' rows' + (sorted.length > TABLE_PAGE ? ` (showing first ${TABLE_PAGE})` : '');
+  document.getElementById('tableCount').textContent =
+    sorted.length.toLocaleString() + ' rows' +
+    (sorted.length > TABLE_MAX ? ` (showing first ${TABLE_MAX})` : '');
 
-  if (sorted.length === 0) {
-    tbody.innerHTML = '';
-    noData.style.display = 'block';
-    return;
-  }
+  if (!sorted.length) { tbody.innerHTML=''; noData.style.display='block'; return; }
   noData.style.display = 'none';
 
-  const rows = sorted.slice(0, TABLE_PAGE);
-  tbody.innerHTML = rows.map(r => {
-    const diffClass = r.df != null ? (r.df >= 0 ? 'pos' : 'neg') : '';
-    const modeColors = { ROAD: '#4f8ef7', MARITIME: '#27ae60', PIPELINE: '#9b59b6', RAIL: '#f5a623' };
-    const mc = modeColors[r.tm] || '#7a7f96';
-    const rowClass = r.b ? '' : 'non-bulk';
-    return `<tr class="${rowClass}">
+  const mc = { ROAD:'#10b981', MARITIME:'#38bdf8', RAIL:'#f59e0b', PIPELINE:'#a78bfa' };
+  tbody.innerHTML = sorted.slice(0, TABLE_MAX).map(r => {
+    const dc = r.df != null ? (r.df >= 0 ? 'pos' : 'neg') : '';
+    const c  = mc[r.tm] || '#7a7f96';
+    return `<tr class="${r.b ? '' : 'non-bulk'}">
       <td>${r.d}</td>
-      <td title="${r.imp}">${shortName(r.imp)}</td>
+      <td title="${r.imp}">${sn(r.imp)}</td>
+      <td title="${r.exp||''}">${expShort(r.exp||'N/A')}</td>
       <td>${r.co}</td>
-      <td><span class="tag" style="background:${mc}22;color:${mc}">${r.tm}</span></td>
-      <td class="num ${diffClass}">${r.df != null ? '$' + fmt(r.df) : '—'}</td>
-      <td class="num">${r.p != null ? '$' + fmt(r.p) : '—'}</td>
-      <td class="num">${r.pl != null ? '$' + fmt(r.pl) : '—'}</td>
-      <td class="num">${r.q != null ? r.q.toLocaleString() : '—'}</td>
-      <td style="color:${r.b ? 'var(--green)' : 'var(--warn)'}">${r.b ? '✓' : '⚠'}</td>
+      <td><span class="mode-tag" style="background:${c}22;color:${c}">${r.tm}</span></td>
+      <td class="num ${dc}">${r.df!=null?'$'+r.df.toFixed(4):'—'}</td>
+      <td class="num">${r.p!=null?'$'+r.p.toFixed(4):'—'}</td>
+      <td class="num">${r.pl!=null?'$'+r.pl.toFixed(4):'—'}</td>
+      <td class="num">${r.rv!=null?'$'+r.rv.toFixed(4):'—'}</td>
+      <td class="num">${r.q!=null?r.q.toLocaleString():'—'}</td>
+      <td style="color:${r.b?'var(--green)':'var(--warn)'}">${r.b?'✓':'⚠'}</td>
     </tr>`;
   }).join('');
 
-  // Update sort icons
   document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
-  const activeTh = document.getElementById('th-' + sortField);
-  if (activeTh) {
-    activeTh.classList.add('sorted');
-    activeTh.querySelector('.sort-icon').textContent = sortDir > 0 ? '↑' : '↓';
+  const ath = document.getElementById('th-'+sortField);
+  if (ath) {
+    ath.classList.add('sorted');
+    ath.querySelector('.sort-icon').textContent = sortDir > 0 ? '↑' : '↓';
   }
 }
 
-function sortTable(field) {
-  if (sortField === field) { sortDir *= -1; }
-  else { sortField = field; sortDir = -1; }
+function sortTable(f) {
+  if (sortField === f) sortDir *= -1; else { sortField = f; sortDir = -1; }
   updateTable();
 }
 
-// ── Controls ──────────────────────────────────────────────────────────
-function setMetric(btn, metric, label) {
-  currentMetric = metric;
-  document.querySelectorAll('.metric-toggle button').forEach(b => b.classList.remove('active'));
+// ── Warn banner ───────────────────────────────────────────────────────────────
+function updateWarnBanner() {
+  const nb = filteredData.filter(r => !r.b);
+  const b  = document.getElementById('warnBanner');
+  if (nb.length) {
+    b.classList.add('visible');
+    document.getElementById('warnText').textContent =
+      `${nb.length} non-bulk Cargolive row${nb.length>1?'s':''} shown — likely non-commercial (e.g. Formula One). Differentials may be unrepresentative.`;
+  } else { b.classList.remove('visible'); }
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function setMetric(m, btn) {
+  currentMetric = m;
+  document.querySelectorAll('#metricTog .tog-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  if (chart) { chart.destroy(); chart = null; }
   updateChart();
 }
 
-function setAgg(btn, agg) {
-  currentAgg = agg;
-  document.querySelectorAll('.agg-toggle button').forEach(b => b.classList.remove('active'));
+function setAgg(a, btn) {
+  currentAgg = a;
+  document.querySelectorAll('#aggTog .tog-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (chart) {
-    chart.options.scales.x.time.unit = agg === 'week' ? 'week' : 'month';
-  }
+  if (chart) { chart.destroy(); chart = null; }
   updateChart();
 }
 
+function setExpMetric(m, btn) {
+  currentExpMetric = m;
+  document.querySelectorAll('.exp-card .tog-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateExporterChart();
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
 function resetFilters() {
-  document.getElementById('filterImporter').selectedIndex = -1;
-  document.getElementById('filterTransport').selectedIndex = -1;
-  document.getElementById('filterCustoms').selectedIndex = -1;
+  ['imp','mode','co','exp'].forEach(id => {
+    ddSelected[id].clear();
+    buildDdList(id, ddAll[id], ddSelected[id]);
+  });
   const dates = RAW_DATA.map(r => r.d).sort();
   document.getElementById('dateFrom').value = dates[0];
-  document.getElementById('dateTo').value = dates[dates.length-1];
+  document.getElementById('dateTo').value   = dates[dates.length-1];
   document.getElementById('toggleNonBulk').checked = false;
   hiddenCompanies.clear();
+  if (chart)    { chart.destroy();    chart    = null; }
+  if (expChart) { expChart.destroy(); expChart = null; }
   applyFilters();
 }
 
-// ── Event listeners ───────────────────────────────────────────────────
-['filterImporter','filterTransport','filterCustoms','dateFrom','dateTo'].forEach(id => {
-  document.getElementById(id).addEventListener('change', applyFilters);
-});
+// ── Misc ──────────────────────────────────────────────────────────────────────
+function fmtNum(n) {
+  if (!n) return '—';
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toFixed(0);
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+document.getElementById('dateFrom').addEventListener('change', applyFilters);
+document.getElementById('dateTo').addEventListener('change', applyFilters);
 document.getElementById('toggleNonBulk').addEventListener('change', applyFilters);
 
-// ── Init ──────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
 populateFilters();
 applyFilters();
 </script>
